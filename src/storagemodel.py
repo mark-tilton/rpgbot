@@ -2,8 +2,8 @@ from dataclasses import dataclass
 import sqlite3
 from sqlite3 import Cursor, Connection
 import time
-from typing import List, Optional
-from datatypes import Activity, ActivityReward, ActivityType
+from typing import List, Optional, Mapping
+from datatypes import Activity, ActivityReward, ActivityType, Item
 
 @dataclass
 class Player:
@@ -13,60 +13,144 @@ class Player:
 class StorageModel:
     def __init__(self):
         self.connection = sqlite3.connect("game_data.db")
-
-    def init_tables(self):
         cursor = self.connection.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS player_activity(
+                activity_id INTEGER PRIMARY KEY ASC,
                 user_id INT, 
-                activity_id INT, 
+                activity_type INT, 
                 start_tick INT,
-                channel_id INT, 
-                message_id INT
+                last_updated INT
             )
             """)
-        cursor.execute("CREATE TABLE IF NOT EXISTS player_skills(user_id, combat_xp, woodcutting_xp, mining_xp)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS player_items(user_id, item_id, quantity)")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS player_xp(
+                user_id,
+                combat_xp, 
+                woodcutting_xp,
+                mining_xp
+            )
+            """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS player_items(
+                user_id, 
+                item_id, 
+                quantity
+            )
+            """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS activity_item_rewards(
+                activity_id,
+                user_id, 
+                item_id, 
+                quantity
+            )
+            """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS activity_xp_rewards(
+                activity_id,
+                user_id, 
+                combat_xp, 
+                woodcutting_xp,
+                mining_xp
+            )
+            """)
         self.connection.commit()
     
     def get_current_activity(self, user_id: int) -> Optional[Activity]:
         cursor = self.connection.cursor()
-        result = cursor.execute("SELECT * FROM player_activity WHERE user_id = ?", (user_id, ))
+        result = cursor.execute("""
+            SELECT 
+                activity_id,
+                user_id,
+                activity_type,
+                start_tick,
+                last_updated
+            FROM player_activity 
+            WHERE user_id = ?
+            ORDER BY start_tick DESC
+            """, (user_id, ))
         row = result.fetchone()
         if row is None:
             return None
-        activity_id, start_tick, channel_id, message_id = row[1:]
-        return Activity(ActivityType(activity_id), start_tick, channel_id, message_id)
+        activity_id, user_id, activity_type, start_tick, last_updated = row
+        return Activity(
+            activity_id=activity_id, 
+            user_id=user_id,
+            activity_type=ActivityType(activity_type), 
+            start_tick=start_tick,
+            last_updated=last_updated)
 
-    def stop_activity(self, user_id: int):
+    def start_activity(self, user_id: int, activity_type: ActivityType, start_tick: int) -> Activity:
         cursor = self.connection.cursor()
-        cursor.execute("DELETE FROM player_activity WHERE user_id = ?", (user_id, ))
-
-    def start_activity(self, user_id: int, activity: Activity):
-        cursor = self.connection.cursor()
-        cursor.execute("DELETE FROM player_activity WHERE user_id = ?", (user_id, ))
         cursor.execute("INSERT INTO player_activity VALUES(?, ?, ?, ?, ?)", 
-                       (user_id, 
-                       activity.activity_type.value, 
-                       activity.start_tick, 
-                       activity.channel_id, 
-                       activity.message_id))
+            (None,
+            user_id, 
+            activity_type.value, 
+            start_tick, 
+            start_tick))
+        self.connection.commit()
+        return Activity(
+            activity_id=cursor.lastrowid, 
+            user_id=user_id, 
+            activity_type=activity_type, 
+            start_tick=start_tick,
+            last_updated=start_tick)
+    
+    def update_activity(self, activity: Activity, reward: Optional[ActivityReward], current_tick: int):
+        cursor = self.connection.cursor()
+        if reward is not None:
+            self._apply_reward(cursor, activity, reward)
+        cursor.execute("""
+            UPDATE player_activity
+            SET last_updated = ?
+            WHERE activity_id = ?
+            """, (current_tick, activity.activity_id))
         self.connection.commit()
 
-    def apply_reward(self, user_id: int, reward: ActivityReward):
-        cursor = self.connection.cursor()
+    def _apply_reward(self, cursor: Cursor, activity: Activity, reward: ActivityReward):
+        user_id = activity.user_id
         for item, quantity in reward.items.items():
             item_id = item.value
-            res = cursor.execute("SELECT quantity FROM player_items WHERE user_id = ? AND item_id = ?", (user_id, item_id))
-            current_quantity = (res.fetchone() or (0, ))[0]
-            cursor.execute("DELETE FROM player_items WHERE user_id = ? AND item_id = ?", (user_id, item_id))
-            cursor.execute("INSERT INTO player_items VALUES(?, ?, ?)", (user_id, item_id, current_quantity + quantity))
-        self.connection.commit()
+            res = cursor.execute("""
+                SELECT quantity 
+                FROM player_items 
+                WHERE user_id = ? AND item_id = ?
+                """, (user_id, item_id))
+            current_quantity = res.fetchone()
+            if current_quantity is None:
+                cursor.execute("INSERT INTO player_items VALUES(?, ?, ?)", (user_id, item_id, quantity))
+                continue
+            cursor.execute("""
+                UPDATE player_items 
+                SET quantity = ? 
+                WHERE user_id = ? AND item_id = ?
+                """, (
+                    current_quantity[0] + quantity,
+                    user_id, 
+                    item_id,
+                ))
+    
+    def get_player_items(self, user_id: int) -> Mapping[Item, int]:
+        cursor = self.connection.cursor()
+        res = cursor.execute("""
+            SELECT 
+                item_id,
+                quantity 
+            FROM player_items
+            WHERE user_id = ?
+        """, (user_id, ))
+        items = {}
+        for item_id, quantity in res.fetchall():
+            items[Item(item_id)] = quantity
+        return items
 
 
 def main():
     model = StorageModel()
-    model.init_tables()
+    model.start_activity(0, ActivityType.COMBAT, 0)
+    model.start_activity(0, ActivityType.COMBAT, 3)
+    model.start_activity(0, ActivityType.COMBAT, 6)
     activity = model.get_current_activity(0)
     print(activity)
 
