@@ -2,8 +2,9 @@
 
 import discord
 import json
-from discord import app_commands
-from discord.ext import commands
+from discord.app_commands import CommandTree, choices, describe, Choice
+from game.woodcutting import LOG_TYPES
+from storage.item import ITEM_NAME, Item
 from storage.activity import ActivityType
 from game.game import Game
 
@@ -14,8 +15,7 @@ intents.message_content = True
 intents.members = True
 
 client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
-bot = commands.Bot(command_prefix='/', intents=intents)
+tree = CommandTree(client)
 
 game = Game()
 
@@ -26,14 +26,17 @@ async def on_ready():
 
 @tree.command(
     name="chop",
-    description="Start chopping trees in this area",
+    description="Start woodcutting in this area",
     guild=discord.Object(id=guild_id)
 )
-async def chop(interaction: discord.Interaction):
+@describe(log_id="The type of tree to chop")
+@choices(log_id=[Choice(name=ITEM_NAME[log], value=log.value) for log in LOG_TYPES])
+async def chop(interaction: discord.Interaction, log_id: int):
     user = interaction.user
     name = user.display_name
-    await interaction.response.send_message(f"{name} is chopping trees in this area.")
-    game.start_activity(user.id, ActivityType.WOODCUTTING)
+    log_type = Item(log_id)
+    await interaction.response.send_message(f"{name} is chopping {ITEM_NAME[log_type]}s in this area.")
+    game.start_woodcutting(user_id=user.id, log_type=log_type)
 
 @tree.command(
     name="mine",
@@ -56,11 +59,14 @@ async def inventory(interaction: discord.Interaction):
     game.update_activity(user.id)
 
     items = game.get_player_items(user.id)
-    item_list = "\n".join([f"    {quantity} {item}" for item, quantity in items.items()])
+    item_list = "\n".join([f"    {quantity} {ITEM_NAME[item]}" for item, quantity in items.items()])
     response_string = f"Inventory: \n{item_list}"
 
     await interaction.response.send_message(response_string, ephemeral=True)
 
+@tree.context_menu(guild=discord.Object(id=guild_id))
+async def react(interaction: discord.Interaction, message: discord.Message):
+    await interaction.response.send_message('Very cool message!', ephemeral=True)
 
 connection_strings = None
 with open("connection_strings.json", mode="r") as f:
