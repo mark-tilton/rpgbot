@@ -4,7 +4,7 @@ import discord
 import json
 from discord import app_commands
 from discord.ext import commands
-from datatypes import ActivityType
+from storage.datatypes import ActivityType
 from game.game import Game
 
 guild_id = 1229078590713364602

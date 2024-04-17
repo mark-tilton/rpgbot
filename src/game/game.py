@@ -2,9 +2,9 @@
 import time
 from typing import Mapping, Optional
 from game.activities import process_activity
-from datatypes import Activity, ActivityType
-from items import Item
-from storagemodel import StorageModel
+from storage.datatypes import Activity, ActivityType
+from storage.items import Item
+from storage.storagemodel import StorageModel
 
 
 class Game:

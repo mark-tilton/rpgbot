@@ -1,7 +1,7 @@
 import sqlite3
 from sqlite3 import Cursor
 from typing import Optional, Mapping
-from datatypes import Activity, ActivityReward, ActivityType, Item
+from storage.datatypes import Activity, ActivityReward, ActivityType, Item
 
 class StorageModel:
     def __init__(self):

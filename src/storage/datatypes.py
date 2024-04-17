@@ -2,14 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Mapping
 
-from items import Item
+from storage.items import Item
 
-
-@dataclass
-class Skills:
-    combat_xp: int = 0
-    woodcutting_xp: int = 0
-    mining_xp: int = 0
 
 class ActivityType(Enum):
     IDLE = 0
@@ -27,5 +21,4 @@ class Activity:
 
 @dataclass
 class ActivityReward:
-    experience: Skills
     items: Mapping[Item, int]
