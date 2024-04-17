@@ -1,14 +1,7 @@
-from dataclasses import dataclass
 import sqlite3
-from sqlite3 import Cursor, Connection
-import time
-from typing import List, Optional, Mapping
+from sqlite3 import Cursor
+from typing import Optional, Mapping
 from datatypes import Activity, ActivityReward, ActivityType, Item
-
-@dataclass
-class Player:
-    id: int
-    name: str
 
 class StorageModel:
     def __init__(self):
@@ -24,35 +17,10 @@ class StorageModel:
             )
             """)
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS player_xp(
-                user_id,
-                combat_xp, 
-                woodcutting_xp,
-                mining_xp
-            )
-            """)
-        cursor.execute("""
             CREATE TABLE IF NOT EXISTS player_items(
                 user_id, 
                 item_id, 
                 quantity
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS activity_item_rewards(
-                activity_id,
-                user_id, 
-                item_id, 
-                quantity
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS activity_xp_rewards(
-                activity_id,
-                user_id, 
-                combat_xp, 
-                woodcutting_xp,
-                mining_xp
             )
             """)
         self.connection.commit()
@@ -90,6 +58,8 @@ class StorageModel:
             start_tick, 
             start_tick))
         self.connection.commit()
+        if not cursor.lastrowid:
+            raise Exception("Lost rowid for new activity")
         return Activity(
             activity_id=cursor.lastrowid, 
             user_id=user_id, 
@@ -140,7 +110,7 @@ class StorageModel:
             FROM player_items
             WHERE user_id = ?
         """, (user_id, ))
-        items = {}
+        items: Mapping[Item, int] = {}
         for item_id, quantity in res.fetchall():
             items[Item(item_id)] = quantity
         return items
