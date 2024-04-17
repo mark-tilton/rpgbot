@@ -15,12 +15,12 @@ class Item(Enum):
     IRON_ORE = 11
     TITANIUM_ORE = 12
 
-    TIN_AXE = 13,
-    COPPER_AXE = 14,
-    BRONZE_AXE = 15,
-    IRON_AXE = 16,
-    STEEL_AXE = 17,
-    TITANIUM_AXE = 18,
+    TIN_AXE = 13
+    COPPER_AXE = 14
+    BRONZE_AXE = 15
+    IRON_AXE = 16
+    STEEL_AXE = 17
+    TITANIUM_AXE = 18
 
 ITEM_NAME = {
     Item.TEAK_LOG: "Teak Log",
