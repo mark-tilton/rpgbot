@@ -8,7 +8,7 @@ import json
 from discord import app_commands
 from discord.ext import commands
 from datatypes import Activity, ActivityType
-from activities import update_activity
+from activities import update_activity, start_activity
 from items import Item
 from storagemodel import StorageModel
 
@@ -38,16 +38,28 @@ async def on_ready():
         print(f"{user.name=} {user.id=}")
 
 @tree.command(
+    name="chop",
+    description="Start chopping trees in this area",
+    guild=discord.Object(id=guild_id)
+)
+async def chop(interaction: discord.Interaction):
+    channel = interaction.channel
+    user = interaction.user
+    name = user.nick or user.display_name
+    await interaction.response.send_message(f"{name} is chopping trees in this area.")
+    start_activity(model, user.id, ActivityType.WOODCUTTING)
+
+@tree.command(
     name="mine",
     description="Start mining in this area",
     guild=discord.Object(id=guild_id)
 )
-async def mine(interaction: discord.Interaction, material: Item):
+async def mine(interaction: discord.Interaction):
     channel = interaction.channel
     user = interaction.user
     name = user.nick
     await interaction.response.send_message(f"{name} is mining in {channel.name}")
-    model.start_activity(user.id, ActivityType.MINING, floor(time.time()))
+    start_activity(model, user.id, ActivityType.MINING)
 
 @tree.command(
     name="inventory",

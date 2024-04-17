@@ -16,11 +16,14 @@ def process_activity(activity: Activity, elapsed_time: int) -> Optional[Activity
         reward = process_mining(elapsed_time, 50000)
     return reward
 
-def start_activity(model: StorageModel) -> Optional[Activity]:
-    ...
-
-def update_activity(model: StorageModel, user_id: int):
+def start_activity(model: StorageModel, user_id: int, activity_type: ActivityType) -> Optional[Activity]:
     current_tick = int(time.time())
+    update_activity(model=model, user_id=user_id, current_tick=current_tick)
+    model.start_activity(user_id=user_id, activity_type=activity_type, start_tick=current_tick)
+
+def update_activity(model: StorageModel, user_id: int, current_tick: Optional[int] = None):
+    if not current_tick:
+        current_tick = int(time.time())
     activity = model.get_current_activity(user_id)
     if activity is None:
         return None
@@ -37,6 +40,8 @@ def process_woodcutting(ticks: int, woodcutting_xp: int) -> ActivityReward:
         current_level = get_level(woodcutting_xp + experience.woodcutting_xp)
         if random.random() * 100 < current_level:
             experience.woodcutting_xp += 10
+            if Item.BIRCH_LOG not in items:
+                items[Item.BIRCH_LOG] = 0
             items[Item.BIRCH_LOG] += 1
     return ActivityReward(experience, items)
 
