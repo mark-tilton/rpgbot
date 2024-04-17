@@ -1,6 +1,8 @@
 from enum import Enum
 
 class Item(Enum):
+    GOLD = 19
+
     TEAK_LOG = 1
     WALNUT_LOG = 2
     PINE_LOG = 3
@@ -23,6 +25,8 @@ class Item(Enum):
     TITANIUM_AXE = 18
 
 ITEM_NAME = {
+    Item.GOLD: "Gold",
+
     Item.TEAK_LOG: "Teak Log",
     Item.WALNUT_LOG: "Walnut Log",
     Item.PINE_LOG: "Pine Log",
@@ -47,8 +51,9 @@ ITEM_NAME = {
 
 ITEM_NAME_REVERSE = {name: item for item, name in ITEM_NAME.items()}
 
-# TODO Item value should rise / fall based on deficit / surplus in the market
 ITEM_VALUE = {
+    Item.GOLD: 1,
+
     Item.TEAK_LOG: 10,
     Item.WALNUT_LOG: 30,
     Item.PINE_LOG: 40,
@@ -63,7 +68,7 @@ ITEM_VALUE = {
     Item.IRON_ORE: 100,
     Item.TITANIUM_ORE: 130,
 
-    Item.TIN_AXE: 2000,
+    Item.TIN_AXE: 0,
     Item.COPPER_AXE: 7000,
     Item.BRONZE_AXE: 23000,
     Item.IRON_AXE: 120000,

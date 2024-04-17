@@ -161,6 +161,19 @@ class StorageModel:
                 continue
             items[Item(item_id)] = quantity
         return items
+
+    def get_item_quantity(self, user_id: int, item: Item) -> int:
+        cursor = self._connection.cursor()
+        result = cursor.execute("""
+            SELECT 
+                quantity 
+            FROM player_items
+            WHERE user_id = ? AND item_id = ?
+        """, (user_id, item.value))
+        row = result.fetchone()
+        if row is None:
+            return 0
+        return row[0]
     
     def get_player_equipment(self, user_id: int) -> Equipment:
         cursor = self._connection.cursor()

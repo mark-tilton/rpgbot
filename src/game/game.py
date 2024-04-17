@@ -3,9 +3,10 @@ from typing import Mapping, Optional
 from game.activities import process_mining
 from game.woodcutting import process_woodcutting, validate_woodcutting_activity
 from game.validation import ValidationResult
+from game.vendors import Vendor
 from storage.equipment import EQUIPMENT_SLOT, Equipment
 from storage.activity import Activity, ActivityReward, ActivityType
-from storage.item import Item
+from storage.item import ITEM_NAME, ITEM_VALUE, Item
 from storage.storagemodel import StorageModel
 
 
@@ -58,9 +59,34 @@ class Game:
     def get_player_items(self, user_id: int) -> Mapping[Item, int]:
         return self.storage_model.get_player_items(user_id=user_id)
 
-    def buy_item(self, user_id, item: Item, quantity: int):
+    def buy_item(self, user_id: int, vendor: Vendor, item: Item, quantity: int) -> ValidationResult:
+        if quantity <= 0:
+            raise Exception("Cannot buy with negative quantity.")
+        if not item in vendor.items:
+            return ValidationResult(False, "This vendor doesn't have that item.")
+        item_cost = ITEM_VALUE[item]
         with self.storage_model as t:
+            self.update_activity(user_id)
+            if not t.add_remove_item(user_id, Item.GOLD, -item_cost * quantity):
+                t.cancel()
+                return ValidationResult(False, "Insufficient gold")
             t.add_remove_item(user_id, item, quantity)
+        return ValidationResult(True)
+
+    def sell_item(self, user_id: int, vendor: Vendor, item: Item, quantity: int) -> ValidationResult:
+        if quantity <= 0:
+            raise Exception("Cannot sell with negative quantity.")
+        if not item in vendor.items:
+            return ValidationResult(False, "This vendor doesn't want that item.")
+        item_cost = ITEM_VALUE[item]
+        with self.storage_model as t:
+            self.update_activity(user_id)
+            if not t.add_remove_item(user_id, item, -quantity):
+                t.cancel()
+                return ValidationResult(False, 
+                    f"You don't have that many {ITEM_NAME[item]}{'s' if quantity > 1 else ''} to sell.")
+            t.add_remove_item(user_id, Item.GOLD, item_cost * quantity)
+        return ValidationResult(True)
     
     def equip_item(self, user_id: int, item: Item) -> ValidationResult:
         if item not in EQUIPMENT_SLOT:
@@ -70,6 +96,7 @@ class Game:
         currently_equipped = current_equipment.get_slot(equipment_slot)
 
         with self.storage_model as t:
+            self.update_activity(user_id)
             if currently_equipped is not None:
                 t.add_remove_item(user_id, currently_equipped, 1)
             if not t.add_remove_item(user_id, item, -1):

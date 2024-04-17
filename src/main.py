@@ -4,7 +4,8 @@ import discord
 import json
 from discord.app_commands import CommandTree, choices, describe, Choice
 from game.woodcutting import LOG_TYPES
-from storage.item import ITEM_NAME, ITEM_NAME_REVERSE, Item
+from game.vendors import VENDORS, VENDORS_BY_NAME
+from storage.item import ITEM_NAME, ITEM_NAME_REVERSE, ITEM_VALUE, Item
 from storage.activity import ActivityType
 from game.game import Game
 
@@ -62,25 +63,78 @@ async def inventory(interaction: discord.Interaction):
     game.update_activity(user.id)
 
     items = game.get_player_items(user.id)
-    item_list = "\n".join([f"    {quantity} {ITEM_NAME[item]}" for item, quantity in items.items()])
+    item_list = "\n".join([f"    {quantity}x {ITEM_NAME[item]}" for item, quantity in items.items()])
     response_string = f"Inventory: \n{item_list}"
 
     await interaction.response.send_message(response_string, ephemeral=True)
+
+@tree.command(
+    name="vendors",
+    description="Display a list of vendors in this area",
+    guild=discord.Object(id=guild_id)
+)
+async def vendors(interaction: discord.Interaction):
+    vendor_list = "\n".join([f"{vendor.name}: {vendor.description}" for vendor in VENDORS])
+    response_string = f"Vendors: \n{vendor_list}"
+    await interaction.response.send_message(response_string)
+
+@tree.command(
+    name="vendor",
+    description="Display information about a specific vendor",
+    guild=discord.Object(id=guild_id)
+)
+async def vendors(interaction: discord.Interaction, vendor_name: str):
+    vendor = VENDORS_BY_NAME.get(vendor_name, None)
+    if vendor is None:
+        await interaction.response.send_message(f"{vendor_name} is not a valid vendor.", ephemeral=True)
+        return
+    item_list = "\n".join([f"    {ITEM_NAME[item]}: {ITEM_VALUE[item]}g" for item in vendor.items])
+    response_string = f"{vendor.name}: \n{item_list}"
+    await interaction.response.send_message(response_string)
 
 @tree.command(
     name="buy",
     description="Buy an item",
     guild=discord.Object(id=guild_id)
 )
-async def buy(interaction: discord.Interaction, item_name: str, quantity: int = 1):
+async def buy(interaction: discord.Interaction, vendor_name: str, item_name: str, quantity: int = 1):
     user = interaction.user
     name = user.display_name
+    vendor = VENDORS_BY_NAME.get(vendor_name, None)
     item = ITEM_NAME_REVERSE.get(item_name, None)
+    if vendor is None:
+        await interaction.response.send_message(f"{vendor_name} is not a valid vendor.", ephemeral=True)
+        return
     if item is None:
         await interaction.response.send_message(f"{item_name} is not a valid item.", ephemeral=True)
         return
-    game.buy_item(user.id, item, quantity)
-    await interaction.response.send_message(f"{name} has purchased {quantity} {item_name}{'s' if quantity > 1 else ''}.")
+    result = game.buy_item(user.id, vendor, item, quantity)
+    if not result.valid:
+        await interaction.response.send_message(f"Unable to buy item: {result.message}")
+        return
+    await interaction.response.send_message(f"{name} has purchased {quantity}x {item_name}{'s' if quantity > 1 else ''}.")
+
+@tree.command(
+    name="sell",
+    description="Sell an item",
+    guild=discord.Object(id=guild_id)
+)
+async def sell(interaction: discord.Interaction, vendor_name: str, item_name: str, quantity: int = 1):
+    user = interaction.user
+    name = user.display_name
+    vendor = VENDORS_BY_NAME.get(vendor_name, None)
+    item = ITEM_NAME_REVERSE.get(item_name, None)
+    if vendor is None:
+        await interaction.response.send_message(f"{vendor_name} is not a valid vendor.", ephemeral=True)
+        return
+    if item is None:
+        await interaction.response.send_message(f"{item_name} is not a valid item.", ephemeral=True)
+        return
+    result = game.sell_item(user.id, vendor, item, quantity)
+    if not result.valid:
+        await interaction.response.send_message(f"Unable to sell item: {result.message}")
+        return
+    await interaction.response.send_message(f"{name} has sold {quantity}x {item_name}{'s' if quantity > 1 else ''}.")
 
 @tree.command(
     name="equip",
