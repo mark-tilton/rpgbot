@@ -1,7 +1,8 @@
 import random
 from typing import Mapping, Optional
-from storage.items import Item
-from storage.datatypes import ActivityReward, ActivityType, Activity
+from game.woodcutting import process_woodcutting
+from storage.item import Item
+from storage.activity import ActivityReward, ActivityType, Activity
 
 def process_activity(activity: Activity, elapsed_time: int) -> Optional[ActivityReward]:
     reward = None
@@ -12,15 +13,6 @@ def process_activity(activity: Activity, elapsed_time: int) -> Optional[Activity
     elif activity.activity_type == ActivityType.MINING:
         reward = process_mining(elapsed_time)
     return reward
-
-def process_woodcutting(ticks: int) -> ActivityReward:
-    items: Mapping[Item, int] = {}
-    for _ in range(ticks):
-        if random.random() * 100 < 30:
-            if Item.BIRCH_LOG not in items:
-                items[Item.BIRCH_LOG] = 0
-            items[Item.BIRCH_LOG] += 1
-    return ActivityReward(items)
 
 def process_mining(ticks: int) -> ActivityReward:
     items: Mapping[Item, int] = {}

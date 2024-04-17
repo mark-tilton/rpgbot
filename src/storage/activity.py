@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Mapping
 
-from storage.items import Item
+from storage.item import Item
 
 
 class ActivityType(Enum):
