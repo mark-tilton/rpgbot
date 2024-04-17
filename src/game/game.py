@@ -40,7 +40,7 @@ class Game:
             t.update_activity(activity=activity)
             if reward:
                 for item, quantity in reward.items.items():
-                    t.add_item(user_id, item, quantity)
+                    t.add_remove_item(user_id, item, quantity)
 
     def process_activity(self, activity: Activity, elapsed_time: int) -> Optional[ActivityReward]:
         reward = None
@@ -60,7 +60,7 @@ class Game:
 
     def buy_item(self, user_id, item: Item, quantity: int):
         with self.storage_model as t:
-            t.add_item(user_id, item, quantity)
+            t.add_remove_item(user_id, item, quantity)
     
     def equip_item(self, user_id: int, item: Item) -> ValidationResult:
         if item not in EQUIPMENT_SLOT:
@@ -71,8 +71,8 @@ class Game:
 
         with self.storage_model as t:
             if currently_equipped is not None:
-                t.add_item(user_id, currently_equipped, 1)
-            if not t.remove_item(user_id, item, 1):
+                t.add_remove_item(user_id, currently_equipped, 1)
+            if not t.add_remove_item(user_id, item, -1):
                 t.cancel()
                 return ValidationResult(False, "Item not found in inventory")
             current_equipment.set_slot(equipment_slot, item)

@@ -43,7 +43,9 @@ class StorageTransaction:
         self._cursor.execute("INSERT INTO woodcutting_activity VALUES(?, ?)", 
             (activity_id, log_type.value))
     
-    def add_item(self, user_id: int, item: Item, quantity: int):
+    def add_remove_item(self, user_id: int, item: Item, quantity: int) -> bool:
+        if quantity == 0:
+            return True
         item_id = item.value
         result = self._cursor.execute("""
             SELECT quantity 
@@ -52,34 +54,19 @@ class StorageTransaction:
             """, (user_id, item_id))
         current_quantity = result.fetchone()
         if current_quantity is None:
+            if quantity < 0:
+                return False
             self._cursor.execute("INSERT INTO player_items VALUES(?, ?, ?)", (user_id, item_id, quantity))
-            return
-        self._cursor.execute("""
-            UPDATE player_items 
-            SET quantity = ? 
-            WHERE user_id = ? AND item_id = ?
-            """, (
-                current_quantity[0] + quantity,
-                user_id, 
-                item_id,
-            ))
-    
-    def remove_item(self, user_id: int, item: Item, quantity: int) -> bool:
-        item_id = item.value
-        result = self._cursor.execute("""
-            SELECT quantity 
-            FROM player_items 
-            WHERE user_id = ? AND item_id = ?
-            """, (user_id, item_id))
-        current_quantity = result.fetchone()
-        if current_quantity is None or current_quantity[0] < quantity:
+            return True
+        new_quantity = current_quantity[0] + quantity
+        if new_quantity < 0:
             return False
         self._cursor.execute("""
             UPDATE player_items 
             SET quantity = ? 
             WHERE user_id = ? AND item_id = ?
             """, (
-                current_quantity[0] - quantity,
+                current_quantity[0] + quantity,
                 user_id, 
                 item_id,
             ))
