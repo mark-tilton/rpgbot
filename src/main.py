@@ -110,7 +110,7 @@ async def buy(interaction: discord.Interaction, vendor_name: str, item_name: str
         return
     result = game.buy_item(user.id, vendor, item, quantity)
     if not result.valid:
-        await interaction.response.send_message(f"Unable to buy item: {result.message}")
+        await interaction.response.send_message(f"Unable to buy item: {result.message}", ephemeral=True)
         return
     await interaction.response.send_message(f"{name} has purchased {quantity}x {item_name}{'s' if quantity > 1 else ''}.")
 
@@ -119,22 +119,31 @@ async def buy(interaction: discord.Interaction, vendor_name: str, item_name: str
     description="Sell an item",
     guild=discord.Object(id=guild_id)
 )
-async def sell(interaction: discord.Interaction, vendor_name: str, item_name: str, quantity: int = 1):
+async def sell(interaction: discord.Interaction, vendor_name: str, item_name: str, quantity: str = "1"):
     user = interaction.user
     name = user.display_name
     vendor = VENDORS_BY_NAME.get(vendor_name, None)
-    item = ITEM_NAME_REVERSE.get(item_name, None)
     if vendor is None:
         await interaction.response.send_message(f"{vendor_name} is not a valid vendor.", ephemeral=True)
         return
+    item = ITEM_NAME_REVERSE.get(item_name, None)
     if item is None:
         await interaction.response.send_message(f"{item_name} is not a valid item.", ephemeral=True)
         return
-    result = game.sell_item(user.id, vendor, item, quantity)
+    quantity_int = 0
+    if quantity.isdigit():
+        quantity_int = int(quantity)
+    elif quantity == "max":
+        current_quantity = game.get_player_items(user.id).get(item, None)
+        if current_quantity is not None:
+            quantity_int = current_quantity
+    else:
+        await interaction.response.send_message(f"{quantity} is not a valid quantity.", ephemeral=True)
+    result = game.sell_item(user.id, vendor, item, quantity_int)
     if not result.valid:
-        await interaction.response.send_message(f"Unable to sell item: {result.message}")
+        await interaction.response.send_message(f"Unable to sell item: {result.message}", ephemeral=True)
         return
-    await interaction.response.send_message(f"{name} has sold {quantity}x {item_name}{'s' if quantity > 1 else ''}.")
+    await interaction.response.send_message(f"{name} has sold {quantity_int}x {item_name}{'s' if quantity_int > 1 else ''}.")
 
 @tree.command(
     name="equip",
@@ -150,9 +159,9 @@ async def equip(interaction: discord.Interaction, item_name: str):
         return
     result = game.equip_item(user.id, item)
     if not result.valid:
-        await interaction.response.send_message(f"Unable to equip {item_name}: {result.message}")
+        await interaction.response.send_message(f"Unable to equip {item_name}: {result.message}", ephemeral=True)
         return
-    await interaction.response.send_message(f"You have equipped your {item_name}.")
+    await interaction.response.send_message(f"You have equipped your {item_name}.", ephemeral=True)
 
 @tree.context_menu(guild=discord.Object(id=guild_id))
 async def react(interaction: discord.Interaction, message: discord.Message):

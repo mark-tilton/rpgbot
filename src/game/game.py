@@ -57,6 +57,7 @@ class Game:
         return reward
     
     def get_player_items(self, user_id: int) -> Mapping[Item, int]:
+        self.update_activity(user_id)
         return self.storage_model.get_player_items(user_id=user_id)
 
     def buy_item(self, user_id: int, vendor: Vendor, item: Item, quantity: int) -> ValidationResult:
