@@ -1,0 +1,104 @@
+# ====================
+# A cave in the forest
+# ====================
+- step: 0
+  zone: 0
+  prompt: While walking in the forest you spot a small cave.
+  frequency: 10 # Expected to occur every n minutes
+  next:
+    - step: 2
+      chance: 30
+    - step: 3
+      chance: 90
+    - step: 1
+
+- step: 1
+  zone: 0
+  prompt: You walk away from the cave, who knows what could be in there!
+
+- step: 2
+  zone: 0
+  prompt: You peer inside the cave and find the remnants of an old camp. You are able to scavenge a few supplies.
+  rewards:
+    - item: 0
+      quantity: [25, 75]
+    - item: 2
+      chance: 10
+
+- step: 3
+  zone: 0
+  prompt: You find a sleeping bear inside guarding a chest.
+  next:
+    - step: 4
+    - step: 5
+
+- step: 4
+  zone: 0
+  prompt: You use your {i1st} to sneak around the bear and loot the chest.
+  reqs:
+    - item: 1
+  rewards:
+    - item: 0
+      quantity: [200, 400]
+      chance: 100
+    - item: 2
+      chance: 50
+
+- step: 5
+  zone: 0
+  prompt: You try to sneak around the bear but your boots make a loud noise. The bear wakes and chases you out of the cave.
+
+# ===============================
+# Reading the forest treasure map
+# ===============================
+- step: 6
+  zone: 0
+  prompt: You look at the treasure map in your bag.
+  frequency: 5
+  reqs:
+    - item: 2
+  next:
+    - step: 7
+      chance: 80
+    - step: 8
+
+- step: 7
+  zone: 0
+  prompt: You have no idea where the map could be pointing. You put the map back in your bag.
+
+- step: 8
+  zone: 0
+  prompt: You recognize the area this map is depicting and travel to the marked location.
+  reqs:
+    - item: 2
+      consume: Yes
+  next:
+    - step: 11
+    - step: 9
+
+- step: 9
+  zone: 0
+  prompt: You find the spot the map was pointing to but without a {i3sl} you can't continue.
+  next:
+    - step: 10
+
+- step: 10
+  zone: 0
+  prompt: You return to the spot marked on the treasure map from earlier.
+  reqs:
+    - item: 3
+  next:
+    - step: 11
+
+- step: 11
+  zone: 0
+  prompt: You use your {i3sl} to dig at the spot and find some treasure!
+  reqs:
+    - item: 3
+  rewards:
+    - item: 0
+      quantity: [400, 800]
+    - item: 4
+      chance: 70
+    - item: 5
+      chance: 25
