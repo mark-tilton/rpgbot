@@ -16,7 +16,7 @@ def display_quest_chain(quest: QuestStep, chance: float = 100, indent: int = 0):
         next_quest = QUESTS[next_step.step_id]
         display_quest_chain(next_quest, next_step.chance, indent + INDENT_SIZE)
     
-for quest in ROOT_QUESTS:
+for quest, frequency in ROOT_QUESTS:
     display_quest_chain(quest)
 
 for item in ITEMS:

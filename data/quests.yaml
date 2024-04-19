@@ -2,8 +2,6 @@
 # ============
 # "frequency" is the number of minutes it is expected to take to trigger a quest.
 # Adding frequency to a quest means it is a start point for a quest chain.
-# A quest completes only when it is able to move on to the next step OR
-#   when there are no more next steps.
 # The requirements for a step are the requirements to go to that step NOT requirements for completing it!
 # Rewards are given when arriving at a step
 # Setting a req to quantity 0 will require the player to not have that item. Requiring a quantity of any other
@@ -34,7 +32,6 @@
     - step: 2
       chance: 30
     - step: 3
-      chance: 90
 
 - step: 2
   zone: 0
@@ -99,6 +96,7 @@
 - step: 9
   zone: 0
   prompt: You find the spot the map was pointing to but without a {i3sl} you can't continue.
+  hold_open: Yes
   next:
     - step: 10
 

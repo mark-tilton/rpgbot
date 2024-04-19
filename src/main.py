@@ -1,10 +1,9 @@
 # This example requires the 'message_content' intent.
 
-import asyncio
 from typing import List
 import discord
 import json
-from discord.app_commands import CommandTree, choices, describe, Choice
+from discord.app_commands import CommandTree
 from game.game import Game
 from game.items import ITEMS
 from game.adventure import AdventureReport

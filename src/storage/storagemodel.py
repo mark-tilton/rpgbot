@@ -1,6 +1,4 @@
 import sqlite3
-import time
-from math import floor
 from sqlite3 import Cursor
 from typing import List, Optional, Mapping
 from game.adventure import Adventure
@@ -119,10 +117,10 @@ class StorageModel:
         self._open_transactions += 1
         return self._transaction
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback): # type: ignore
         self._open_transactions -= 1
         if self._open_transactions == 0:
-            if self._transaction and self._transaction._rollback:
+            if self._transaction and self._transaction._rollback: # type: ignore
                 self._connection.rollback()
             else:
                 self._connection.commit()

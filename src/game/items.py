@@ -1,5 +1,5 @@
 import yaml
-from typing import List, Mapping
+from typing import List
 from dataclasses import dataclass, field
 
 @dataclass
@@ -30,11 +30,21 @@ class Inventory:
             return False
         self.items[item_id] = current_quantity - quantity
         return True
+    
+    def add_inventory(self, inventory: "Inventory"):
+        for item_id, quantity in inventory.items.items():
+            self.add_item(item_id, quantity)
+    
+    def remove_inventory(self, inventory: "Inventory") -> bool:
+        for item_id, quantity in inventory.items.items():
+            if not self.remove_item(item_id, quantity):
+                return False
+        return True
 
 def load_items() -> List[Item]:
     with open("data/items.yaml", mode="r") as f:
         item_list_yaml = yaml.safe_load(f)
-    items = []
+    items: List[Item] = []
     for item_yaml in item_list_yaml:
         item_id = item_yaml["item"]
         name = item_yaml["name"].lower()
@@ -47,7 +57,7 @@ def load_items() -> List[Item]:
 def build_format_dictionary(items: List[Item]) -> dict[str, str]:
     plural_options = ["s", "p"]
     casing_options = ["l", "c", "t"]
-    item_format_dict = {}
+    item_format_dict: dict[str, str] = {}
     for item in items:
         for plural in plural_options:
             for casing in casing_options:

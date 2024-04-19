@@ -12,7 +12,6 @@ class AdventureStep:
     items_gained: Inventory = field(default_factory=Inventory)
     items_lost: Inventory = field(default_factory=Inventory)
 
-    # Use a stringbuilder
     def display(self) -> str:
         display_lines = [self.quest.prompt]
         inventories: List[tuple[str, Inventory]] = [("+", self.items_gained), ("-", self.items_lost)]
@@ -72,20 +71,6 @@ class Adventure:
 # TODO Change all rates to be based on tick rate so you can speed up / slow down the game.
 TICK_RATE = 5 # One tick every 5 seconds
 
-def check_step_requirements(
-    quest_step: QuestStep, 
-    player_items: Inventory, 
-    zone_id: int) -> bool:
-    if zone_id != quest_step.zone_id:
-        return False
-    for item_req in quest_step.requirements:
-        player_quantity = player_items.items.get(item_req.item_id, 0)
-        if item_req.quantity == 0 and player_quantity > 0:
-            return False
-        if player_quantity < item_req.quantity:
-            return False
-    return True
-
 def try_progress_step(
     step_id: int, 
     player_items: Inventory, 
@@ -97,44 +82,45 @@ def try_progress_step(
         return QuestCompletion(None, None)
     
     # Choose a next step
-    next_step = None
-    for step in quest.next_steps:
-        step_quest = QUESTS[step.step_id]
-        if not check_step_requirements(step_quest, player_items, zone_id):
-            continue
-        if random.random() * 100 < step.chance:
-            next_step = step_quest
-            break
+    next_step = quest.choose_next_step(player_items, zone_id)
     
     # Unable to progress this quest
     if next_step is None:
         return QuestCompletion(None, step_id)
     
-    # Roll for items
-    rewards = Inventory()
-    for reward in next_step.rewards:
-        if random.random() * 100 < reward.chance:
-            quantity = random.randint(*reward.quantity)
-            rewards.add_item(reward.item_id, quantity)
-    
-    # Consume items
-    consumed_items = Inventory()
-    for item_req in next_step.requirements:
-        if not item_req.consume:
-            continue
-        consumed_items.add_item(item_req.item_id, item_req.quantity)
+    completed_quest = next_step.complete_quest()
 
     # Check if step is terminal
     next_step_id = None
     if len(next_step.next_steps) > 0:
         next_step_id = next_step.step_id
 
-    adventure_step = AdventureStep(next_step, rewards, consumed_items)
+    adventure_step = AdventureStep(next_step, completed_quest.items_gained, completed_quest.items_lost)
     return QuestCompletion(adventure_step, next_step_id)
+
+def process_quests(
+    quests: List[QuestStep], 
+    player_items: Inventory, 
+    zone_id: int) -> tuple[List[AdventureStep], List[QuestStep]]:
+    adventure_steps: List[AdventureStep] = []
+    open_quests: List[QuestStep] = []
+    while len(quests) > 0:
+        new_quest = quests.pop()
+        completed_quest = new_quest.complete_quest()
+        player_items.add_inventory(completed_quest.items_gained)
+        player_items.remove_inventory(completed_quest.items_lost)
+        adventure_steps.append(AdventureStep(new_quest, completed_quest.items_gained, completed_quest.items_lost))
+        next_step = new_quest.choose_next_step(player_items, zone_id)
+        if next_step is None:
+            if new_quest.hold_open:
+                open_quests.append(new_quest)
+            continue
+        quests.append(next_step)
+    return adventure_steps, open_quests
 
 def process_adventure(
     player_items: Inventory, 
-    open_quests: List[int],
+    open_quest_ids: List[int],
     zone_id: int, 
     adventure: Adventure) -> AdventureReport:
     current_time = int(time.time())
@@ -142,60 +128,45 @@ def process_adventure(
     num_ticks = int(elapsed / TICK_RATE)
     current_time = adventure.last_updated + num_ticks * TICK_RATE
 
-    open_quests = [*open_quests]
+    open_quests = [QUESTS[quest_id] for quest_id in open_quest_ids]
 
     adventure_steps: List[AdventureStep] = []
-    for tick in range(7200):
-        # Check if we can progress any open quests
-        completed_step_idx = None
-        quest_adventure_step = None
-        next_step_id = None
-        for i, step_id in reversed(list(enumerate(open_quests))):
-            result = try_progress_step(step_id, player_items, zone_id)
-            if result.adventure_step is not None:
-                completed_step_idx = i
-                quest_adventure_step = result.adventure_step
-                next_step_id = result.next_step
-                break
-        if completed_step_idx is not None and quest_adventure_step is not None:
-            open_quests.pop(completed_step_idx)
-            for item, quantity in quest_adventure_step.items_gained.items.items():
-                player_items.add_item(item, quantity)
-            for item, quantity in quest_adventure_step.items_lost.items.items():
-                player_items.remove_item(item, quantity)
-            adventure_steps.append(quest_adventure_step)
-            if next_step_id is not None:
-                open_quests.append(next_step_id)
-            continue
+    for _ in range(7200):
+        available_quests: List[QuestStep] = []
+        removed_open_quests: List[int] = []
+        for i, open_quest in enumerate(reversed(open_quests)):
+            next_step = open_quest.choose_next_step(player_items, zone_id)
+            if next_step is None:
+                continue
+            removed_open_quests.append(len(open_quests) - i - 1)
+            available_quests.append(next_step)
+        if len(removed_open_quests) > 0:
+            print(removed_open_quests)
+        for i in removed_open_quests:
+            open_quests.pop(i)
+        
+        new_adventure_steps, new_open_quests = process_quests(available_quests, player_items, zone_id)
+        open_quests.extend(new_open_quests)
+        adventure_steps.extend(new_adventure_steps)
 
         # Try to start a new quest
-        new_quest = None
-        for root_quest in ROOT_QUESTS:
-            if not check_step_requirements(root_quest, player_items, zone_id):
+        new_quests: List[QuestStep] = []
+        for root_quest, frequency in ROOT_QUESTS:
+            if not root_quest.check_quest_requirements(player_items, zone_id):
                 continue
-            assert(root_quest.frequency is not None)
-            frequency_seconds = root_quest.frequency * 60
+            frequency_seconds = frequency * 60
             frequency_ticks = frequency_seconds / TICK_RATE
-            if frequency_ticks == 0 or random.random() < (1 / frequency_ticks):
-                new_quest = root_quest
-                break
-        
-        if new_quest is not None:
-            items_gained = Inventory()
-            for quest_reward in new_quest.rewards:
-                quantity = random.randint(*quest_reward.quantity)
-                items_gained.add_item(quest_reward.item_id, quantity)
-                player_items.add_item(quest_reward.item_id, quantity)
-            items_lost = Inventory()
-            for req in new_quest.requirements:
-                if not req.consume:
-                    continue
-                items_lost.add_item(req.item_id, req.quantity)
-                player_items.remove_item(req.item_id, req.quantity)
-            adventure_steps.append(AdventureStep(new_quest, items_gained, items_lost))
-            if len(new_quest.next_steps) > 0:
-                open_quests.append(new_quest.step_id)
-            continue
+            threshold = 1 / frequency_ticks if frequency_ticks > 0 else 1
+            if random.random() < threshold:
+                new_quests.append(root_quest)
 
-    return AdventureReport(adventure.last_updated, current_time, adventure_steps, open_quests)
+        new_adventure_steps, new_open_quests = process_quests(new_quests, player_items, zone_id)
+        open_quests.extend(new_open_quests)
+        adventure_steps.extend(new_adventure_steps)
+
+    return AdventureReport(
+        adventure.last_updated, 
+        current_time, 
+        adventure_steps, 
+        [quest.step_id for quest in open_quests])
 

@@ -34,7 +34,7 @@ class Game:
             return None
         report = process_adventure(
             player_items=player_items,
-            open_quests=open_quests,
+            open_quest_ids=open_quests,
             zone_id=zone_id,
             adventure=adventure,
         )
