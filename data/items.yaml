@@ -26,5 +26,6 @@
   name: simple lockpicking set
 
 - item: 7
-  name: berries
+  name: berry
+  plural: berries
   category: food

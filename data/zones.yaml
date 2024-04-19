@@ -1,9 +1,9 @@
-- zone: 1
+- zone: 0
   name: Forest
   description: A quiet forest
   connections:
-    - zone: 2
+    - zone: 1
       frequency: 60 # Expected to discover this connection in n minutes
 
-- zone: 2
+- zone: 1
   name: Mortia

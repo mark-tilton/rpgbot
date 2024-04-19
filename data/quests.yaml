@@ -1,20 +1,36 @@
+# Format notes
+# ============
+# "frequency" is the number of minutes it is expected to take to trigger a quest.
+# Adding frequency to a quest means it is a start point for a quest chain.
+# A quest completes only when it is able to move on to the next step OR
+#   when there are no more next steps.
+# The requirements for a step are the requirements to go to that step NOT requirements for completing it!
+# Rewards are given when arriving at a step
+# Setting a req to quantity 0 will require the player to not have that item. Requiring a quantity of any other
+#   positive integer will require the player to have AT LEAST that many items.
+# Different drop tables can be defined for the same item. eg. 80% chance to get 10-100g, 10% chance to get 200-300g
+# Consumable reqs can only specify an item once.
+
 # ====================
 # A cave in the forest
 # ====================
 - step: 0
   zone: 0
   prompt: While walking in the forest you spot a small cave.
-  frequency: 10 # Expected to occur every n minutes
+  frequency: 10
   next:
     - step: 2
       chance: 30
     - step: 3
       chance: 90
-    - step: 1
 
 - step: 1
   zone: 0
-  prompt: You walk away from the cave, who knows what could be in there!
+  prompt: You find some {i7pl} in a nearby bush.
+  frequency: 0.1
+  rewards:
+    - item: 7
+      quantity: [3, 7]
 
 - step: 2
   zone: 0
@@ -23,7 +39,7 @@
     - item: 0
       quantity: [25, 75]
     - item: 2
-      chance: 10
+      chance: 50
 
 - step: 3
   zone: 0
@@ -59,7 +75,7 @@
     - item: 2
   next:
     - step: 7
-      chance: 80
+      chance: 30
     - step: 8
 
 - step: 7

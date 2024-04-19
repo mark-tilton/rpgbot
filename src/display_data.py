@@ -1,8 +1,6 @@
 import random
-from game.quests import QUESTS, QuestStep
+from game.quests import QUESTS, ROOT_QUESTS, QuestStep
 from game.items import ITEMS
-
-root_quests = [quest for quest in QUESTS if quest.frequency is not None]
 
 INDENT_SIZE = 2
 def display_quest_chain(quest: QuestStep, chance=100, indent: int = 0):
@@ -18,7 +16,7 @@ def display_quest_chain(quest: QuestStep, chance=100, indent: int = 0):
         next_quest = QUESTS[next_step.step_id]
         display_quest_chain(next_quest, next_step.chance, indent + INDENT_SIZE)
     
-for quest in root_quests:
+for quest in ROOT_QUESTS:
     display_quest_chain(quest)
 
 for item in ITEMS:

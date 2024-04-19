@@ -78,3 +78,4 @@ def load_quests() -> List[QuestStep]:
     return quest_steps
 
 QUESTS = load_quests()
+ROOT_QUESTS = [quest for quest in QUESTS if quest.frequency is not None]

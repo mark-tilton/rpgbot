@@ -1,12 +1,35 @@
-from typing import List
 import yaml
-from dataclasses import dataclass
+from typing import List, Mapping
+from dataclasses import dataclass, field
 
 @dataclass
 class Item:
     item_id: int
     name: str
     plural: str
+
+@dataclass
+class Inventory:
+    items: Mapping[int, int] = field(default_factory=dict)
+
+    def add_item(self, item_id: int, quantity: int):
+        if quantity <= 0:
+            return
+        if item_id not in self.items:
+            self.items[item_id] = quantity
+            return
+        self.items[item_id] += quantity
+
+    def remove_item(self, item_id: int, quantity: int) -> bool:
+        if quantity <= 0:
+            return True
+        if item_id not in self.items:
+            return False
+        current_quantity = self.items[item_id]
+        if current_quantity < quantity:
+            return False
+        self.items[item_id] = current_quantity - quantity
+        return True
 
 def load_items() -> List[Item]:
     with open("data/items.yaml", mode="r") as f:
