@@ -10,7 +10,7 @@ class Item:
 
 @dataclass
 class Inventory:
-    items: Mapping[int, int] = field(default_factory=dict)
+    items: dict[int, int] = field(default_factory=dict)
 
     def add_item(self, item_id: int, quantity: int):
         if quantity <= 0:

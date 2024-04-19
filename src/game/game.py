@@ -17,18 +17,21 @@ class Game:
             report = None
             if current_adventure is not None:
                 report = self.update_adventure(user_id, current_adventure)
+                assert (report is not None)
                 # Offset end / start times for adventures to avoid overlap
                 start_time = report.end_time + 1
             t.start_adventure(user_id, zone_id, start_time)
             t.set_player_zone(user_id, zone_id, start_time)
         return report
 
-    def update_adventure(self, user_id: int, adventure: Optional[Adventure] = None) -> AdventureReport:
+    def update_adventure(self, user_id: int, adventure: Optional[Adventure] = None) -> Optional[AdventureReport]:
         player_items = self.get_player_items(user_id)
         open_quests = self.get_open_quests(user_id)
         zone_id = self.get_player_zone(user_id)
         if adventure is None:
             adventure = self.get_adventure_info(user_id)
+        if adventure is None or zone_id is None:
+            return None
         report = process_adventure(
             player_items=player_items,
             open_quests=open_quests,
@@ -46,12 +49,12 @@ class Game:
         return report
     
     def get_player_items(self, user_id: int) -> Inventory:
-        return Inventory(self.storage_model.get_player_items(user_id=user_id))
+        return Inventory(dict(self.storage_model.get_player_items(user_id=user_id)))
 
     def get_open_quests(self, user_id: int) -> List[int]:
         return self.storage_model.get_open_quests(user_id)
 
-    def get_player_zone(self, user_id: int) -> int:
+    def get_player_zone(self, user_id: int) -> Optional[int]:
         return self.storage_model.get_player_zone(user_id)
 
     def get_adventure_info(self, user_id: int) -> Optional[Adventure]:

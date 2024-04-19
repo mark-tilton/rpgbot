@@ -11,26 +11,30 @@
 # Different drop tables can be defined for the same item. eg. 80% chance to get 10-100g, 10% chance to get 200-300g
 # Consumable reqs can only specify an item once.
 
+# ===================
+# Mergable activities
+# ===================
+- step: 1
+  zone: 0
+  prompt: You find {i7pl} while foraging in the forest.
+  frequency: 1
+  merge: Yes
+  rewards:
+    - item: 7
+      quantity: [3, 7]
+
 # ====================
 # A cave in the forest
 # ====================
 - step: 0
   zone: 0
   prompt: While walking in the forest you spot a small cave.
-  frequency: 10
+  frequency: 60
   next:
     - step: 2
       chance: 30
     - step: 3
       chance: 90
-
-- step: 1
-  zone: 0
-  prompt: You find some {i7pl} in a nearby bush.
-  frequency: 0.1
-  rewards:
-    - item: 7
-      quantity: [3, 7]
 
 - step: 2
   zone: 0
@@ -70,7 +74,7 @@
 - step: 6
   zone: 0
   prompt: You look at the treasure map in your bag.
-  frequency: 5
+  frequency: 0
   reqs:
     - item: 2
   next:

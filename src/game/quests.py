@@ -26,6 +26,7 @@ class QuestStep:
     zone_id: int
     prompt: str
     frequency: Optional[float]
+    merge: bool
     requirements: List[QuestItemRequirement]
     rewards: List[QuestReward]
     next_steps: List[QuestNextStep]
@@ -41,6 +42,7 @@ def load_quests() -> List[QuestStep]:
         zone = quest_step_yaml["zone"]
         prompt = quest_step_yaml["prompt"].format(**ITEM_FORMAT_DICT)
         frequency = quest_step_yaml.get("frequency", None)
+        merge = quest_step_yaml.get("merge", False)
         requirements = []
         for quest_requirement_yaml in quest_step_yaml.get("reqs", []):
             item_id = quest_requirement_yaml["item"]
@@ -54,7 +56,7 @@ def load_quests() -> List[QuestStep]:
             quantity = quest_reward_yaml.get("quantity", 1)
             if isinstance(quantity, int):
                 quantity = [quantity, quantity]
-            quantity = tuple(quantity)
+            quantity = (quantity[0], quantity[1])
             chance = quest_reward_yaml.get("chance", 100)
             quest_reward = QuestReward(item_id, quantity, chance)
             rewards.append(quest_reward)
@@ -69,6 +71,7 @@ def load_quests() -> List[QuestStep]:
             zone_id=zone,
             prompt=prompt,
             frequency=frequency,
+            merge=merge,
             requirements=requirements,
             rewards=rewards,
             next_steps=next_steps

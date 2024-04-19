@@ -1,27 +1,28 @@
 import time
 import random
-from typing import List, Optional
-from dataclasses import dataclass
+from typing import List, Mapping, Optional
+from dataclasses import dataclass, field
 
 from game.quests import QUESTS, ROOT_QUESTS, QuestStep 
 from game.items import ITEMS, Inventory
 
-
 @dataclass
 class AdventureStep:
-    prompt: str
-    items_gained: Inventory
-    items_lost: Inventory
+    quest: QuestStep
+    items_gained: Inventory = field(default_factory=Inventory)
+    items_lost: Inventory = field(default_factory=Inventory)
 
+    # Use a stringbuilder
     def display(self) -> str:
-        display_string = self.prompt
-        if len(self.items_gained.items) > 0:
-            display_string += "\n" + "\n".join([f"    +{quantity} {ITEMS[item_id].name}" 
-                for item_id, quantity in self.items_gained.items.items()])
-        if len(self.items_lost.items) > 0:
-            display_string += "\n" + "\n".join([f"    -{quantity} {ITEMS[item_id].name}" 
-                for item_id, quantity in self.items_lost.items.items()])
-        return display_string
+        display_lines = [self.quest.prompt]
+        inventories: List[tuple[str, Inventory]] = [("+", self.items_gained), ("-", self.items_lost)]
+        for sign, inventory in inventories:
+            for item_id, quantity in inventory.items.items():
+                item = ITEMS[item_id]
+                item_name = item.name if quantity == 1 else item.plural
+                item_name = item_name.title()
+                display_lines.append(f"    {sign}{quantity} {item_name}")
+        return "\n".join(display_lines)
 
 
 @dataclass
@@ -32,7 +33,26 @@ class AdventureReport:
     open_quests: List[int]
 
     def display(self) -> str:
-        return "\n".join([step.display() for step in self.adventure_steps])
+        merged_steps: Mapping[int, List[AdventureStep]] = {}
+        display_lines: List[str] = []
+        for step in self.adventure_steps:
+            if step.quest.merge:
+                if step.quest.step_id not in merged_steps:
+                    merged_steps[step.quest.step_id] = []
+                merged_steps[step.quest.step_id].append(step)
+                continue
+            display_lines.append(step.display())
+        for _, steps in merged_steps.items():
+            first_step = steps[0]
+            merged_step = AdventureStep(first_step.quest)
+            for step in steps:
+                for item, quantity in step.items_gained.items.items():
+                    merged_step.items_gained.add_item(item, quantity)
+                for item, quantity in step.items_lost.items.items():
+                    merged_step.items_lost.add_item(item, quantity)
+            display_lines.append(merged_step.display())
+
+        return "\n".join(display_lines)
 
 
 @dataclass
@@ -50,7 +70,7 @@ class Adventure:
 
 
 # TODO Change all rates to be based on tick rate so you can speed up / slow down the game.
-TICK_RATE = 0.5 # One tick every 5 seconds
+TICK_RATE = 5 # One tick every 5 seconds
 
 def check_step_requirements(
     quest_step: QuestStep, 
@@ -109,7 +129,7 @@ def try_progress_step(
     if len(next_step.next_steps) > 0:
         next_step_id = next_step.step_id
 
-    adventure_step = AdventureStep(next_step.prompt, rewards, consumed_items)
+    adventure_step = AdventureStep(next_step, rewards, consumed_items)
     return QuestCompletion(adventure_step, next_step_id)
 
 def process_adventure(
@@ -125,7 +145,7 @@ def process_adventure(
     open_quests = [*open_quests]
 
     adventure_steps: List[AdventureStep] = []
-    for tick in range(num_ticks):
+    for tick in range(7200):
         # Check if we can progress any open quests
         completed_step_idx = None
         quest_adventure_step = None
@@ -153,10 +173,10 @@ def process_adventure(
         for root_quest in ROOT_QUESTS:
             if not check_step_requirements(root_quest, player_items, zone_id):
                 continue
+            assert(root_quest.frequency is not None)
             frequency_seconds = root_quest.frequency * 60
             frequency_ticks = frequency_seconds / TICK_RATE
-            # if random.random() < (1 / frequency_ticks):
-            if random.random() < 0.2:
+            if frequency_ticks == 0 or random.random() < (1 / frequency_ticks):
                 new_quest = root_quest
                 break
         
@@ -172,7 +192,7 @@ def process_adventure(
                     continue
                 items_lost.add_item(req.item_id, req.quantity)
                 player_items.remove_item(req.item_id, req.quantity)
-            adventure_steps.append(AdventureStep(new_quest.prompt, items_gained, items_lost))
+            adventure_steps.append(AdventureStep(new_quest, items_gained, items_lost))
             if len(new_quest.next_steps) > 0:
                 open_quests.append(new_quest.step_id)
             continue

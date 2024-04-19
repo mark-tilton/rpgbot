@@ -1,6 +1,7 @@
 # This example requires the 'message_content' intent.
 
 import asyncio
+from typing import List
 import discord
 import json
 from discord.app_commands import CommandTree, choices, describe, Choice
@@ -25,18 +26,22 @@ async def on_ready():
     await tree.sync(guild=discord.Object(id=guild_id))
 
 async def send_adventure_report(channel: discord.TextChannel, report: AdventureReport):
-    messages = []
-    current_message = ""
-    for step in report.adventure_steps:
-        step_display = step.display()
-        if len(current_message) + len(step_display) > 2000:
+    messages: List[List[str]] = []
+    report_lines = report.display().splitlines()
+    current_message = []
+    message_length = 0
+    for line in report_lines:
+        line_length = len(line) + 2
+        if line_length + message_length > 1800:
             messages.append(current_message)
-            current_message = step_display
+            current_message = [line]
+            message_length = line_length
             continue
-        current_message += "\n" + step_display
+        current_message.append(line)
+        message_length += line_length
     messages.append(current_message)
     for message in messages:
-        await channel.send(message)
+        await channel.send("\n".join(message))
 
 @tree.command(
     name="adventure",
@@ -47,9 +52,10 @@ async def adventure(interaction: discord.Interaction):
     user = interaction.user
     name = user.display_name
     report = game.start_adventure(user.id, 0)
-    if report is not None:
-        await send_adventure_report(interaction.channel, report)
+    channel = interaction.channel
     await interaction.response.send_message(f"{name} is adventuring in this area.")
+    if report is not None and channel is not None and isinstance(channel, discord.TextChannel):
+        await send_adventure_report(channel, report)
 
 @tree.command(
     name="inventory",
@@ -66,8 +72,9 @@ async def inventory(interaction: discord.Interaction):
     response_string = f"Inventory: \n{item_list}"
     await interaction.response.send_message(response_string, ephemeral=True)
 
-    if report is not None:
-        await send_adventure_report(interaction.channel, report)
+    channel = interaction.channel
+    if report is not None and channel is not None and isinstance(channel, discord.TextChannel):
+        await send_adventure_report(channel, report)
 
 @tree.command(
     name="give",
