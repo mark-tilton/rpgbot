@@ -59,3 +59,9 @@ class Game:
 
     def get_adventure_info(self, user_id: int) -> Optional[Adventure]:
         return self.storage_model.get_current_adventure(user_id)
+    
+    def get_player_accessable_zones(self, user_id: int) -> List[int]:
+        return self.storage_model.get_player_accessable_zones(user_id)
+    
+    def discover_zone(self, user_id: int, zone_id: int):
+        ...

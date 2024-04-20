@@ -28,11 +28,11 @@
   prompt: While walking in the forest you spot a small cave.
   frequency: 60
   next:
-    - quest: 2
+    - quest: 1
       chance: 30
     - quest: 3
 
-- quest: 2
+- quest: 1
   zone: 0
   prompt: You peer inside the cave and find the remnants of an old camp. You are able to scavenge a few supplies.
   rewards:
@@ -121,12 +121,15 @@
       chance: 25
 
 - quest: 13
-  zone: 1
-  prompt: You find someone in the city who can open your {i4sl}!
+  zone: 0
+  prompt: You follow a road east into a clearing.
   frequency: 0
-  reqs:
-    - item: 4
-      consume: Yes
+  repeatable: No
+  next:
+    - quest: 14
+
+- quest: 14
+  zone: 0
+  prompt: Beyond the clearing you see vast farmlands surrounding a large city.
   rewards:
-    - item: 0
-      quantity: [100, 200]
+    - zone: 1

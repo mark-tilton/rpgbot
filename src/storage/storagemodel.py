@@ -93,6 +93,12 @@ class StorageModel:
             )
             """)
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS player_zone_access(
+                user_id INT, 
+                zone_id INT, 
+            )
+            """)
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS open_quests(
                 user_id INT,
                 quest_step_id INT,
@@ -188,6 +194,15 @@ class StorageModel:
             return None
         zone_id, _ = row
         return zone_id
+    
+    def get_player_accessable_zones(self, user_id: int) -> List[int]:
+        cursor = self._connection.cursor()
+        result = cursor.execute("""
+            SELECT zone_id
+            FROM player_zone_access
+            WHERE user_id = ?
+            """, (user_id, ))
+        return [zone_id for zone_id in result.fetchall()]
 
     def get_open_quests(self, user_id: int) -> List[int]:
         cursor = self._connection.cursor()

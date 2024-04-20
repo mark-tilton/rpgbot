@@ -13,7 +13,7 @@
 
 - item: 3
   name: shovel
-  category: tools
+  category: tool
 
 - item: 4
   name: small lockbox
