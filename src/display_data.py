@@ -1,9 +1,9 @@
 import random
-from game.quests import QUESTS, ROOT_QUESTS, QuestStep
+from game.quests import QUESTS, ROOT_QUESTS, Quest
 from game.items import ITEMS
 
 INDENT_SIZE = 2
-def display_quest_chain(quest: QuestStep, chance: float = 100, indent: int = 0):
+def display_quest_chain(quest: Quest, chance: float = 100, indent: int = 0):
     indent_str = " " * indent
     reqs_str = ", ".join([str(ITEMS[req.item_id].name.title()) for req in quest.requirements])
     if len(quest.requirements) > 0:
@@ -13,7 +13,7 @@ def display_quest_chain(quest: QuestStep, chance: float = 100, indent: int = 0):
         chance_str = f"{chance}%: "
     print(f"{indent_str}- {chance_str}{reqs_str}{quest.prompt}")
     for next_step in quest.next_steps:
-        next_quest = QUESTS[next_step.step_id]
+        next_quest = QUESTS[next_step.quest_id]
         display_quest_chain(next_quest, next_step.chance, indent + INDENT_SIZE)
     
 for quest, frequency in ROOT_QUESTS:

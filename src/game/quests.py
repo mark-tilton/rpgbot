@@ -21,7 +21,7 @@ class QuestReward:
 
 @dataclass(frozen=True)
 class CompletedQuest:
-    step_id: int
+    quest_id: int
     zone_id: int
     prompt: str
     items_gained: Inventory
@@ -30,13 +30,13 @@ class CompletedQuest:
 
 @dataclass(frozen=True)
 class QuestNextStep:
-    step_id: int
+    quest_id: int
     chance: float
 
 
 @dataclass(frozen=True)
-class QuestStep:
-    step_id: int
+class Quest:
+    quest_id: int
     zone_id: int
     prompt: str
     frequency: Optional[float]
@@ -57,7 +57,7 @@ class QuestStep:
                 continue
             items_lost.add_item(req.item_id, req.quantity)
         return CompletedQuest(
-            step_id=self.step_id,
+            quest_id=self.quest_id,
             zone_id=self.zone_id,
             prompt=self.prompt,
             items_gained=items_gained,
@@ -81,37 +81,37 @@ class QuestStep:
     def choose_next_step(
         self, 
         player_items: Inventory, 
-        zone_id: int) -> Optional["QuestStep"]:
+        zone_id: int) -> Optional["Quest"]:
         for step in self.next_steps:
-            step_quest = QUESTS[step.step_id]
-            if not step_quest.check_quest_requirements(player_items, zone_id):
+            quest = QUESTS[step.quest_id]
+            if not quest.check_quest_requirements(player_items, zone_id):
                 continue
             if random.random() * 100 < step.chance:
-                return step_quest
+                return quest
         return None
 
 
 # TODO Add quest file validation to check for duplicated ids, extra fields, etc...
-def load_quests() -> List[QuestStep]:
+def load_quests() -> List[Quest]:
     with open("data/quests.yaml", mode="r") as f:
         quest_list_yaml = yaml.safe_load(f)
-    quest_steps: List[QuestStep] = []
-    for quest_step_yaml in quest_list_yaml:
-        id = quest_step_yaml["step"]
-        zone = quest_step_yaml["zone"]
-        prompt = quest_step_yaml["prompt"].format(**ITEM_FORMAT_DICT)
-        frequency = quest_step_yaml.get("frequency", None)
-        merge = quest_step_yaml.get("merge", False)
-        hold_open = quest_step_yaml.get("hold_open", False)
+    quests: List[Quest] = []
+    for quest_yaml in quest_list_yaml:
+        quest_id = quest_yaml["quest"]
+        zone = quest_yaml["zone"]
+        prompt = quest_yaml["prompt"].format(**ITEM_FORMAT_DICT)
+        frequency = quest_yaml.get("frequency", None)
+        merge = quest_yaml.get("merge", False)
+        hold_open = quest_yaml.get("hold_open", False)
         requirements: List[QuestItemRequirement] = []
-        for quest_requirement_yaml in quest_step_yaml.get("reqs", []):
+        for quest_requirement_yaml in quest_yaml.get("reqs", []):
             item_id = quest_requirement_yaml["item"]
             quantity = quest_requirement_yaml.get("quantity", 1)
             consume = quest_requirement_yaml.get("consume", False)
             quest_requirement = QuestItemRequirement(item_id, quantity, consume)
             requirements.append(quest_requirement)
         rewards: List[QuestReward] = []
-        for quest_reward_yaml in quest_step_yaml.get("rewards", []):
+        for quest_reward_yaml in quest_yaml.get("rewards", []):
             item_id = quest_reward_yaml["item"]
             quantity = quest_reward_yaml.get("quantity", 1)
             if isinstance(quantity, int):
@@ -121,13 +121,13 @@ def load_quests() -> List[QuestStep]:
             quest_reward = QuestReward(item_id, quantity, chance)
             rewards.append(quest_reward)
         next_steps: List[QuestNextStep] = []
-        for next_step_yaml in quest_step_yaml.get("next", []):
-            step_id = next_step_yaml["step"]
+        for next_step_yaml in quest_yaml.get("next", []):
+            quest_id = next_step_yaml["quest"]
             chance = next_step_yaml.get("chance", 100)
-            next_step = QuestNextStep(step_id, chance)
+            next_step = QuestNextStep(quest_id, chance)
             next_steps.append(next_step)
-        quest_step = QuestStep(
-            step_id=id,
+        quest = Quest(
+            quest_id=quest_id,
             zone_id=zone,
             prompt=prompt,
             frequency=frequency,
@@ -137,9 +137,9 @@ def load_quests() -> List[QuestStep]:
             rewards=rewards,
             next_steps=next_steps
         )
-        quest_steps.append(quest_step)
-    quest_steps.sort(key=lambda step: step.step_id)
-    return quest_steps
+        quests.append(quest)
+    quests.sort(key=lambda step: step.quest_id)
+    return quests
 
 QUESTS = load_quests()
 ROOT_QUESTS = [(quest, quest.frequency) for quest in QUESTS if quest.frequency is not None]

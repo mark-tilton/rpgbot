@@ -5,13 +5,13 @@
 # Setting a req to quantity 0 will require the player to not have that item. Requiring a quantity of any other
 #   positive integer will require the player to have AT LEAST that many items.
 # Different drop tables can be defined for the same item. eg. 80% chance to get 10-100g, 10% chance to get 200-300g
-# Setting "merge=Yes" on a step will allow all instances of that step to be merged when displaying the output
-# Setting "hold_open=Yes" will force the quest to be held open even if the player doensn't meet the requirements for any next step.
+# Setting "merge=Yes" on a quest will allow all instances of that quest to be merged when displaying the output
+# Setting "hold_open=Yes" will force the quest to be held open even if the player doensn't meet the requirements for any next quest.
 
 # ===================
 # Mergable activities
 # ===================
-- step: 12
+- quest: 12
   zone: 0
   prompt: You find {i7pl} while foraging in the forest.
   frequency: 3
@@ -23,16 +23,16 @@
 # ====================
 # A cave in the forest
 # ====================
-- step: 0
+- quest: 0
   zone: 0
   prompt: While walking in the forest you spot a small cave.
   frequency: 60
   next:
-    - step: 2
+    - quest: 2
       chance: 30
-    - step: 3
+    - quest: 3
 
-- step: 2
+- quest: 2
   zone: 0
   prompt: You peer inside the cave and find the remnants of an old camp. You are able to scavenge a few supplies.
   rewards:
@@ -41,14 +41,14 @@
     - item: 2
       chance: 50
 
-- step: 3
+- quest: 3
   zone: 0
   prompt: You find a sleeping bear inside guarding a chest.
   next:
-    - step: 4
-    - step: 5
+    - quest: 4
+    - quest: 5
 
-- step: 4
+- quest: 4
   zone: 0
   prompt: You use your {i1st} to sneak around the bear and loot the chest.
   reqs:
@@ -60,54 +60,54 @@
     - item: 2
       chance: 50
 
-- step: 5
+- quest: 5
   zone: 0
   prompt: You try to sneak around the bear but your boots make a loud noise. The bear wakes and chases you out of the cave.
 
 # ===============================
 # Reading the forest treasure map
 # ===============================
-- step: 6
+- quest: 6
   zone: 0
   prompt: You look at the treasure map in your bag.
   frequency: 0
   reqs:
     - item: 2
   next:
-    - step: 7
+    - quest: 7
       chance: 30
-    - step: 8
+    - quest: 8
 
-- step: 7
+- quest: 7
   zone: 0
   prompt: You have no idea where the map could be pointing. You put the map back in your bag.
 
-- step: 8
+- quest: 8
   zone: 0
   prompt: You recognize the area this map is depicting and travel to the marked location.
   reqs:
     - item: 2
       consume: Yes
   next:
-    - step: 11
-    - step: 9
+    - quest: 11
+    - quest: 9
 
-- step: 9
+- quest: 9
   zone: 0
   prompt: You find the spot the map was pointing to but without a {i3sl} you can't continue.
   hold_open: Yes
   next:
-    - step: 10
+    - quest: 10
 
-- step: 10
+- quest: 10
   zone: 0
   prompt: You return to the spot marked on the treasure map from earlier.
   reqs:
     - item: 3
   next:
-    - step: 11
+    - quest: 11
 
-- step: 11
+- quest: 11
   zone: 0
   prompt: You use your {i3sl} to dig at the spot and find some treasure!
   reqs:
@@ -120,7 +120,7 @@
     - item: 5
       chance: 25
 
-- step: 13
+- quest: 13
   zone: 1
   prompt: You find someone in the city who can open your {i4sl}!
   frequency: 0

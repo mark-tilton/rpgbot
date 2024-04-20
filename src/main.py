@@ -24,7 +24,7 @@ channel_to_zone: Mapping[int, Zone] = {}
 
 @client.event
 async def on_ready():
-    print(f"Loading zones")
+    print(f"Initializing Zones")
     # Find existing zones
     found_zones: set[int] = set()
     for channel in client.get_all_channels():

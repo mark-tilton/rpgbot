@@ -3,12 +3,12 @@ import random
 from typing import List, Mapping, Optional
 from dataclasses import dataclass, field
 
-from game.quests import QUESTS, ROOT_QUESTS, QuestStep 
+from game.quests import QUESTS, ROOT_QUESTS, Quest 
 from game.items import ITEMS, Inventory
 
 @dataclass
 class AdventureStep:
-    quest: QuestStep
+    quest: Quest
     items_gained: Inventory = field(default_factory=Inventory)
     items_lost: Inventory = field(default_factory=Inventory)
 
@@ -36,9 +36,9 @@ class AdventureReport:
         display_lines: List[str] = []
         for step in self.adventure_steps:
             if step.quest.merge:
-                if step.quest.step_id not in merged_steps:
-                    merged_steps[step.quest.step_id] = []
-                merged_steps[step.quest.step_id].append(step)
+                if step.quest.quest_id not in merged_steps:
+                    merged_steps[step.quest.quest_id] = []
+                merged_steps[step.quest.quest_id].append(step)
                 continue
             display_lines.append(step.display())
         for _, steps in merged_steps.items():
@@ -71,43 +71,15 @@ class Adventure:
 # TODO Change all rates to be based on tick rate so you can speed up / slow down the game.
 TICK_RATE = 5 # One tick every 5 seconds
 
-def try_progress_step(
-    step_id: int, 
-    player_items: Inventory, 
-    zone_id: int) -> QuestCompletion:
-    quest = QUESTS[step_id]
-
-    # Can't progress a quest that doesn't have next steps
-    if len(quest.next_steps) == 0:
-        return QuestCompletion(None, None)
-    
-    # Choose a next step
-    next_step = quest.choose_next_step(player_items, zone_id)
-    
-    # Unable to progress this quest
-    if next_step is None:
-        return QuestCompletion(None, step_id)
-    
-    completed_quest = next_step.complete_quest()
-
-    # Check if step is terminal
-    next_step_id = None
-    if len(next_step.next_steps) > 0:
-        next_step_id = next_step.step_id
-
-    adventure_step = AdventureStep(next_step, completed_quest.items_gained, completed_quest.items_lost)
-    return QuestCompletion(adventure_step, next_step_id)
-
 def process_quests(
-    quests: List[QuestStep], 
+    quests: List[Quest], 
     player_items: Inventory, 
-    zone_id: int) -> tuple[List[AdventureStep], List[QuestStep]]:
+    zone_id: int) -> tuple[List[AdventureStep], List[Quest]]:
     adventure_steps: List[AdventureStep] = []
-    open_quests: List[QuestStep] = []
+    open_quests: List[Quest] = []
     while len(quests) > 0:
         new_quest = quests.pop()
         completed_quest = new_quest.complete_quest()
-        print(completed_quest)
         player_items.add_inventory(completed_quest.items_gained)
         player_items.remove_inventory(completed_quest.items_lost)
         adventure_steps.append(AdventureStep(new_quest, completed_quest.items_gained, completed_quest.items_lost))
@@ -133,14 +105,14 @@ def process_adventure(
 
     adventure_steps: List[AdventureStep] = []
     for _ in range(num_ticks):
-        available_quests: List[QuestStep] = []
+        available_quests: List[Quest] = []
         removed_open_quests: List[int] = []
         for i, open_quest in enumerate(reversed(open_quests)):
-            next_step = open_quest.choose_next_step(player_items, zone_id)
-            if next_step is None:
+            next_quest = open_quest.choose_next_step(player_items, zone_id)
+            if next_quest is None:
                 continue
             removed_open_quests.append(len(open_quests) - i - 1)
-            available_quests.append(next_step)
+            available_quests.append(next_quest)
         if len(removed_open_quests) > 0:
             print(removed_open_quests)
         for i in removed_open_quests:
@@ -151,7 +123,7 @@ def process_adventure(
         adventure_steps.extend(new_adventure_steps)
 
         # Try to start a new quest
-        new_quests: List[QuestStep] = []
+        new_quests: List[Quest] = []
         for root_quest, frequency in ROOT_QUESTS:
             if not root_quest.check_quest_requirements(player_items, zone_id):
                 continue
@@ -169,5 +141,5 @@ def process_adventure(
         adventure.last_updated, 
         current_time, 
         adventure_steps, 
-        [quest.step_id for quest in open_quests])
+        [quest.quest_id for quest in open_quests])
 
