@@ -107,6 +107,7 @@ def process_quests(
     while len(quests) > 0:
         new_quest = quests.pop()
         completed_quest = new_quest.complete_quest()
+        print(completed_quest)
         player_items.add_inventory(completed_quest.items_gained)
         player_items.remove_inventory(completed_quest.items_lost)
         adventure_steps.append(AdventureStep(new_quest, completed_quest.items_gained, completed_quest.items_lost))
@@ -131,7 +132,7 @@ def process_adventure(
     open_quests = [QUESTS[quest_id] for quest_id in open_quest_ids]
 
     adventure_steps: List[AdventureStep] = []
-    for _ in range(7200):
+    for _ in range(num_ticks):
         available_quests: List[QuestStep] = []
         removed_open_quests: List[int] = []
         for i, open_quest in enumerate(reversed(open_quests)):
