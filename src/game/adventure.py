@@ -1,11 +1,11 @@
-import time
 import random
-from typing import Mapping, Optional
+import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from .zones import ZONES
-from .quests import QUESTS, ROOT_QUESTS, Quest
 from .items import ITEMS, Inventory
+from .quests import QUESTS, ROOT_QUESTS, Quest
+from .zones import ZONES
 
 
 @dataclass
@@ -66,8 +66,8 @@ class AdventureReport:
 
 @dataclass
 class QuestCompletion:
-    adventure_step: Optional[AdventureStep]
-    next_step: Optional[int]
+    adventure_step: AdventureStep | None
+    next_step: int | None
 
 
 @dataclass
@@ -92,11 +92,12 @@ def process_quests(
         new_quest = quests.pop()
         completed_quest = new_quest.complete_quest()
         player_items.add_inventory(completed_quest.items_gained)
+        # We can assume this remove will succeed because we already checked requirements
         player_items.remove_inventory(completed_quest.items_lost)
         adventure_steps.append(
             AdventureStep(
-                new_quest, 
-                completed_quest.items_gained, 
+                new_quest,
+                completed_quest.items_gained,
                 completed_quest.items_lost,
                 completed_quest.zones_discovered,
             )

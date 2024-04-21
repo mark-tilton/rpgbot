@@ -1,6 +1,6 @@
 import random
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import List, Mapping, Optional
 
 import yaml
 
@@ -26,7 +26,7 @@ class CompletedQuest:
     quest_id: int
     items_gained: Inventory
     items_lost: Inventory
-    zones_discovered: List[int]
+    zones_discovered: list[int]
 
 
 @dataclass(frozen=True)
@@ -40,14 +40,14 @@ class Quest:
     quest_id: int
     zone_id: int
     prompt: str
-    frequency: Optional[float]
+    frequency: float | None
     repeatable: bool
     merge: bool
     hold_open: bool
-    requirements: List[QuestItemRequirement]
-    rewards: List[QuestReward]
-    zone_unlocks: List[int]
-    next_steps: List[QuestNextStep]
+    requirements: list[QuestItemRequirement]
+    rewards: list[QuestReward]
+    zone_unlocks: list[int]
+    next_steps: list[QuestNextStep]
 
     def complete_quest(self) -> CompletedQuest:
         items_gained = Inventory()
@@ -77,9 +77,7 @@ class Quest:
                 return False
         return True
 
-    def choose_next_step(
-        self, player_items: Inventory, zone_id: int
-    ) -> Optional["Quest"]:
+    def choose_next_step(self, player_items: Inventory, zone_id: int) -> "Quest | None":
         for step in self.next_steps:
             quest = QUESTS[step.quest_id]
             if not quest.check_quest_requirements(player_items, zone_id):
@@ -105,17 +103,16 @@ def load_quests() -> Mapping[int, Quest]:
         merge = quest_yaml.get("merge", False)
         hold_open = quest_yaml.get("hold_open", False)
 
-        requirements: List[QuestItemRequirement] = []
+        requirements: list[QuestItemRequirement] = []
         for quest_requirement_yaml in quest_yaml.get("reqs", []):
             item_id = quest_requirement_yaml["item"]
             quantity = quest_requirement_yaml.get("quantity", 1)
             consume = quest_requirement_yaml.get("consume", False)
-            quest_requirement = QuestItemRequirement(
-                item_id, quantity, consume)
+            quest_requirement = QuestItemRequirement(item_id, quantity, consume)
             requirements.append(quest_requirement)
 
-        rewards: List[QuestReward] = []
-        zone_unlocks: List[int] = []
+        rewards: list[QuestReward] = []
+        zone_unlocks: list[int] = []
         for quest_reward_yaml in quest_yaml.get("rewards", []):
             item_id = quest_reward_yaml.get("item", None)
             if item_id is None:
@@ -130,7 +127,7 @@ def load_quests() -> Mapping[int, Quest]:
             quest_reward = QuestReward(item_id, quantity, chance)
             rewards.append(quest_reward)
 
-        next_steps: List[QuestNextStep] = []
+        next_steps: list[QuestNextStep] = []
         for next_step_yaml in quest_yaml.get("next", []):
             next_quest_id = next_step_yaml["quest"]
             chance = next_step_yaml.get("chance", 100)

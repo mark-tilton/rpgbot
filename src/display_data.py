@@ -7,8 +7,9 @@ INDENT_SIZE = 2
 
 def display_quest_chain(quest: Quest, chance: float = 100, indent: int = 0):
     indent_str = " " * indent
-    reqs_str = ", ".join([str(ITEMS[req.item_id].name.title())
-                         for req in quest.requirements])
+    reqs_str = ", ".join(
+        [str(ITEMS[req.item_id].name.title()) for req in quest.requirements]
+    )
     if len(quest.requirements) > 0:
         reqs_str = f"({reqs_str}) "
     chance_str = ""

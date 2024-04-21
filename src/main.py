@@ -1,12 +1,12 @@
-# This example requires the 'message_content' intent.
-
-from typing import List, Mapping
-import discord
 import json
+from collections.abc import Mapping
+
+import discord
 from discord.app_commands import CommandTree
+
+from game.adventure import AdventureReport
 from game.game import Game
 from game.items import ITEMS
-from game.adventure import AdventureReport
 from game.zones import ZONES, ZONES_BY_NAME, Zone
 
 guild_id = 1229078590713364602
@@ -38,7 +38,7 @@ async def on_ready():
             channel_to_zone[channel.id] = zone
             zone_to_channel[zone.zone_id] = channel.id
             found_zones.add(zone.zone_id)
-    
+
     # Clear out all channels
     for zone_id in found_zones:
         channel_id = zone_to_channel[zone_id]
@@ -47,7 +47,7 @@ async def on_ready():
             continue
         await channel.delete()
     found_zones.clear()
-        
+
     # Add new zones to the server
     self_overwrite = discord.PermissionOverwrite()
     self_overwrite.view_channel = True
@@ -62,18 +62,18 @@ async def on_ready():
             overwrites={
                 guild.roles[0]: hidden_overwrite,
                 guild.self_role: self_overwrite,
-            }
+            },
         )
         channel_to_zone[channel.id] = zone
         zone_to_channel[zone.zone_id] = channel.id
 
-    print(f'We have logged in as {client.user}')
+    print(f"We have logged in as {client.user}")
     await tree.sync(guild=discord.Object(id=guild_id))
 
 
 async def handle_adventure_report(
-        interaction: discord.Interaction,
-        report: AdventureReport):
+    interaction: discord.Interaction, report: AdventureReport
+):
     # Grant access to channels
     shown_overwrite = discord.PermissionOverwrite()
     shown_overwrite.view_channel = True
@@ -90,18 +90,16 @@ async def handle_adventure_report(
             if not isinstance(channel, discord.TextChannel):
                 continue
             await channel.set_permissions(user, overwrite=shown_overwrite)
-    
+
     channel = interaction.channel
     if not isinstance(channel, discord.TextChannel):
         return
     await send_adventure_report(channel, report)
-            
-    
-async def send_adventure_report(
-        channel: discord.TextChannel,
-        report: AdventureReport):
+
+
+async def send_adventure_report(channel: discord.TextChannel, report: AdventureReport):
     # Send report
-    messages: List[List[str]] = []
+    messages: list[list[str]] = []
     report_lines = report.display().splitlines()
     current_message = []
     message_length = 0
@@ -124,7 +122,7 @@ async def send_adventure_report(
 @tree.command(
     name="adventure",
     description="Start adventuring in this area.",
-    guild=discord.Object(id=guild_id)
+    guild=discord.Object(id=guild_id),
 )
 async def adventure(interaction: discord.Interaction):
     user = interaction.user
@@ -135,8 +133,7 @@ async def adventure(interaction: discord.Interaction):
     zone = channel_to_zone[channel.id]
 
     report = game.start_adventure(user.id, zone.zone_id)
-    await interaction.response.send_message(
-        f"{name} is adventuring in this area.")
+    await interaction.response.send_message(f"{name} is adventuring in this area.")
 
     if report is not None:
         await handle_adventure_report(interaction, report)
@@ -145,7 +142,7 @@ async def adventure(interaction: discord.Interaction):
 @tree.command(
     name="inventory",
     description="View the items in your inventory",
-    guild=discord.Object(id=guild_id)
+    guild=discord.Object(id=guild_id),
 )
 async def inventory(interaction: discord.Interaction):
     user = interaction.user
@@ -154,9 +151,11 @@ async def inventory(interaction: discord.Interaction):
 
     items = game.get_player_items(user.id)
     item_list = "\n".join(
-        [f"    {quantity}x {ITEMS[item].name}"
-            for item, quantity
-            in items.items.items()])
+        [
+            f"    {quantity}x {ITEMS[item].name}"
+            for item, quantity in items.items.items()
+        ]
+    )
     response_string = f"Inventory: \n{item_list}"
     await interaction.response.send_message(response_string, ephemeral=True)
 
@@ -165,9 +164,7 @@ async def inventory(interaction: discord.Interaction):
 
 
 @tree.command(
-    name="give",
-    description="Give yourself an item",
-    guild=discord.Object(id=guild_id)
+    name="give", description="Give yourself an item", guild=discord.Object(id=guild_id)
 )
 async def give(interaction: discord.Interaction, item_id: int, quantity: int):
     user = interaction.user
@@ -175,8 +172,10 @@ async def give(interaction: discord.Interaction, item_id: int, quantity: int):
     with game.storage_model as t:
         t.add_remove_item(user.id, item_id, quantity)
     await interaction.response.send_message(
-        f"{user.display_name} is cheating! " +
-        f"They gave themself {quantity} {ITEMS[item_id].name}")
+        f"{user.display_name} is cheating! "
+        + f"They gave themself {quantity} {ITEMS[item_id].name}"
+    )
+
 
 connection_strings = None
 with open("connection_strings.json", mode="r") as f:

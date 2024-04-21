@@ -1,6 +1,6 @@
-import yaml
-from typing import List
 from dataclasses import dataclass, field
+
+import yaml
 
 
 @dataclass
@@ -44,10 +44,10 @@ class Inventory:
         return True
 
 
-def load_items() -> List[Item]:
+def load_items() -> list[Item]:
     with open("data/items.yaml", mode="r") as f:
         item_list_yaml = yaml.safe_load(f)
-    items: List[Item] = []
+    items: list[Item] = []
     for item_yaml in item_list_yaml:
         item_id = item_yaml["item"]
         name = item_yaml["name"].lower()
@@ -58,7 +58,7 @@ def load_items() -> List[Item]:
     return items
 
 
-def build_format_dictionary(items: List[Item]) -> dict[str, str]:
+def build_format_dictionary(items: list[Item]) -> dict[str, str]:
     plural_options = ["s", "p"]
     casing_options = ["l", "c", "t"]
     item_format_dict: dict[str, str] = {}

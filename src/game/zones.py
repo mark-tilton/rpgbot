@@ -1,6 +1,6 @@
-import yaml
-from typing import List
 from dataclasses import dataclass
+
+import yaml
 
 
 @dataclass
@@ -15,19 +15,19 @@ class Zone:
     name: str
     description: str
     public: bool
-    connections: List[ZoneConnection]
+    connections: list[ZoneConnection]
 
 
-def load_zones() -> List[Zone]:
+def load_zones() -> list[Zone]:
     with open("data/zones.yaml", mode="r") as f:
         zone_list_yaml = yaml.safe_load(f)
-    zones: List[Zone] = []
+    zones: list[Zone] = []
     for zone_yaml in zone_list_yaml:
         zone_id = zone_yaml["zone"]
         name = zone_yaml["name"].lower()
         description = zone_yaml.get("description", "")
         public = zone_yaml.get("public", False)
-        connections: List[ZoneConnection] = []
+        connections: list[ZoneConnection] = []
         for connection_yaml in zone_yaml.get("connections", []):
             con_zone_id = connection_yaml["zone"]
             frequency = connection_yaml["frequency"]
