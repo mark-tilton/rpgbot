@@ -1,6 +1,6 @@
 import time
 from math import floor
-from typing import List, Optional
+from typing import Optional
 from game.adventure import Adventure, AdventureReport, process_adventure
 from game.items import Inventory
 from storage.storagemodel import StorageModel
@@ -40,10 +40,12 @@ class Game:
             adventure = self.get_adventure_info(user_id)
         if adventure is None or zone_id is None:
             return None
+        finished_quests = self.get_finished_quests(user_id)
         report = process_adventure(
             player_items=player_items,
             open_quest_ids=open_quests,
             zone_id=zone_id,
+            locked_quests=finished_quests,
             adventure=adventure,
         )
         with self.storage_model as t:
@@ -55,14 +57,26 @@ class Game:
                 for item_id, quantity in (
                         adventure_step.items_lost.items.items()):
                     t.add_remove_item(user_id, item_id, -quantity)
+                for zone_id in adventure_step.zones_discovered:
+                    t.add_zone_access(user_id, zone_id)
+            for finished_quest in report.finished_quests:
+                t.add_finished_quest(user_id, finished_quest)
             t.set_open_quests(user_id, report.open_quests)
         return report
+
+    def add_zone_access(self, user_id: int, zone_id: int):
+        with self.storage_model as t:
+            t.add_zone_access(user_id, zone_id)
+
+    def add_finished_quests(self, user_id: int, quest_id: int):
+        with self.storage_model as t:
+            t.add_finished_quest(user_id, quest_id)
 
     def get_player_items(self, user_id: int) -> Inventory:
         return Inventory(
             dict(self.storage_model.get_player_items(user_id=user_id)))
 
-    def get_open_quests(self, user_id: int) -> List[int]:
+    def get_open_quests(self, user_id: int) -> list[int]:
         return self.storage_model.get_open_quests(user_id)
 
     def get_player_zone(self, user_id: int) -> Optional[int]:
@@ -71,9 +85,8 @@ class Game:
     def get_adventure_info(self, user_id: int) -> Optional[Adventure]:
         return self.storage_model.get_current_adventure(user_id)
 
-    def get_player_zone_access(self, user_id: int) -> List[int]:
-        return self.storage_model.get_player_zone_access(user_id)
+    def get_player_zone_access(self, user_id: int) -> set[int]:
+        return set(self.storage_model.get_player_zone_access(user_id))
 
-    def add_zone_access(self, user_id: int, zone_id: int):
-        with self.storage_model as t:
-            t.storage_model.add_zone_access()
+    def get_finished_quests(self, user_id: int) -> set[int]:
+        return set(self.storage_model.get_finished_quests(user_id))

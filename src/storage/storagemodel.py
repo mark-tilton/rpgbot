@@ -91,6 +91,11 @@ class StorageTransaction:
             "INSERT INTO player_zone_access VALUES(?, ?)",
             (user_id, zone_id))
 
+    def add_finished_quest(self, user_id: int, quest_id: int):
+        self._cursor.execute(
+            "INSERT INTO finished_quests VALUES(?, ?)",
+            (user_id, quest_id))
+
 
 class StorageModel:
     def __init__(self):
@@ -129,6 +134,12 @@ class StorageModel:
                 user_id INT,
                 item_id INT,
                 quantity INT
+            )
+            """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS finished_quests(
+                user_id INT,
+                quest_id INT
             )
             """)
 
@@ -222,7 +233,7 @@ class StorageModel:
             FROM player_zone_access
             WHERE user_id = ?
             """, (user_id, ))
-        return [zone_id for zone_id in result.fetchall()]
+        return [zone_id[0] for zone_id in result.fetchall()]
 
     def get_open_quests(self, user_id: int) -> List[int]:
         cursor = self._connection.cursor()
@@ -235,3 +246,12 @@ class StorageModel:
             ORDER BY order_idx ASC
             """, (user_id, ))
         return [step_id for step_id, _ in result.fetchall()]
+
+    def get_finished_quests(self, user_id: int) -> List[int]:
+        cursor = self._connection.cursor()
+        result = cursor.execute("""
+            SELECT quest_id
+            FROM finished_quests
+            WHERE user_id = ?
+            """, (user_id, ))
+        return [quest_id[0] for quest_id in result.fetchall()]

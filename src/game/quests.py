@@ -41,6 +41,7 @@ class Quest:
     zone_id: int
     prompt: str
     frequency: Optional[float]
+    repeatable: bool
     merge: bool
     hold_open: bool
     requirements: List[QuestItemRequirement]
@@ -58,12 +59,11 @@ class Quest:
             if not req.consume:
                 continue
             items_lost.add_item(req.item_id, req.quantity)
-        zones_discovered = []
         return CompletedQuest(
             quest_id=self.quest_id,
             items_gained=items_gained,
             items_lost=items_lost,
-            zones_discovered=zones_discovered,
+            zones_discovered=self.zone_unlocks,
         )
 
     def check_quest_requirements(self, player_items: Inventory, zone_id: int) -> bool:
@@ -101,6 +101,7 @@ def load_quests() -> Mapping[int, Quest]:
         zone = quest_yaml["zone"]
         prompt = quest_yaml["prompt"].format(**ITEM_FORMAT_DICT)
         frequency = quest_yaml.get("frequency", None)
+        repeatable = quest_yaml.get("repeatable", True)
         merge = quest_yaml.get("merge", False)
         hold_open = quest_yaml.get("hold_open", False)
 
@@ -141,6 +142,7 @@ def load_quests() -> Mapping[int, Quest]:
             zone_id=zone,
             prompt=prompt,
             frequency=frequency,
+            repeatable=repeatable,
             merge=merge,
             hold_open=hold_open,
             requirements=requirements,
