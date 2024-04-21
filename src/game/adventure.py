@@ -3,18 +3,23 @@ import random
 from typing import List, Mapping, Optional
 from dataclasses import dataclass, field
 
-from game.quests import QUESTS, ROOT_QUESTS, Quest 
-from game.items import ITEMS, Inventory
+from .quests import QUESTS, ROOT_QUESTS, Quest
+from .items import ITEMS, Inventory
+
 
 @dataclass
 class AdventureStep:
     quest: Quest
     items_gained: Inventory = field(default_factory=Inventory)
     items_lost: Inventory = field(default_factory=Inventory)
+    zones_discovered: List[int] = field(default_factory=list)
 
     def display(self) -> str:
         display_lines = [self.quest.prompt]
-        inventories: List[tuple[str, Inventory]] = [("+", self.items_gained), ("-", self.items_lost)]
+        inventories: List[tuple[str, Inventory]] = [
+            ("+", self.items_gained),
+            ("-", self.items_lost),
+        ]
         for sign, inventory in inventories:
             for item_id, quantity in inventory.items.items():
                 item = ITEMS[item_id]
@@ -68,13 +73,14 @@ class Adventure:
     last_updated: int
 
 
-# TODO Change all rates to be based on tick rate so you can speed up / slow down the game.
-TICK_RATE = 5 # One tick every 5 seconds
+# TODO Change all rates to be based on tick rate so
+# you can speed up / slow down the game.
+TICK_RATE = 5  # One tick every 5 seconds
+
 
 def process_quests(
-    quests: List[Quest], 
-    player_items: Inventory, 
-    zone_id: int) -> tuple[List[AdventureStep], List[Quest]]:
+    quests: List[Quest], player_items: Inventory, zone_id: int
+) -> tuple[List[AdventureStep], List[Quest]]:
     adventure_steps: List[AdventureStep] = []
     open_quests: List[Quest] = []
     while len(quests) > 0:
@@ -82,7 +88,11 @@ def process_quests(
         completed_quest = new_quest.complete_quest()
         player_items.add_inventory(completed_quest.items_gained)
         player_items.remove_inventory(completed_quest.items_lost)
-        adventure_steps.append(AdventureStep(new_quest, completed_quest.items_gained, completed_quest.items_lost))
+        adventure_steps.append(
+            AdventureStep(
+                new_quest, completed_quest.items_gained, completed_quest.items_lost
+            )
+        )
         next_step = new_quest.choose_next_step(player_items, zone_id)
         if next_step is None:
             if new_quest.hold_open:
@@ -91,11 +101,13 @@ def process_quests(
         quests.append(next_step)
     return adventure_steps, open_quests
 
+
 def process_adventure(
-    player_items: Inventory, 
+    player_items: Inventory,
     open_quest_ids: List[int],
-    zone_id: int, 
-    adventure: Adventure) -> AdventureReport:
+    zone_id: int,
+    adventure: Adventure,
+) -> AdventureReport:
     current_time = int(time.time())
     elapsed = current_time - adventure.last_updated
     num_ticks = int(elapsed / TICK_RATE)
@@ -104,7 +116,7 @@ def process_adventure(
     open_quests = [QUESTS[quest_id] for quest_id in open_quest_ids]
 
     adventure_steps: List[AdventureStep] = []
-    for _ in range(num_ticks):
+    for _ in range(1):
         available_quests: List[Quest] = []
         removed_open_quests: List[int] = []
         for i, open_quest in enumerate(reversed(open_quests)):
@@ -113,12 +125,12 @@ def process_adventure(
                 continue
             removed_open_quests.append(len(open_quests) - i - 1)
             available_quests.append(next_quest)
-        if len(removed_open_quests) > 0:
-            print(removed_open_quests)
         for i in removed_open_quests:
             open_quests.pop(i)
-        
-        new_adventure_steps, new_open_quests = process_quests(available_quests, player_items, zone_id)
+
+        new_adventure_steps, new_open_quests = process_quests(
+            available_quests, player_items, zone_id
+        )
         open_quests.extend(new_open_quests)
         adventure_steps.extend(new_adventure_steps)
 
@@ -133,13 +145,15 @@ def process_adventure(
             if random.random() < threshold:
                 new_quests.append(root_quest)
 
-        new_adventure_steps, new_open_quests = process_quests(new_quests, player_items, zone_id)
+        new_adventure_steps, new_open_quests = process_quests(
+            new_quests, player_items, zone_id
+        )
         open_quests.extend(new_open_quests)
         adventure_steps.extend(new_adventure_steps)
 
     return AdventureReport(
-        adventure.last_updated, 
-        current_time, 
-        adventure_steps, 
-        [quest.quest_id for quest in open_quests])
-
+        adventure.last_updated,
+        current_time,
+        adventure_steps,
+        [quest.quest_id for quest in open_quests],
+    )

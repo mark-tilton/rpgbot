@@ -3,9 +3,12 @@ from game.quests import QUESTS, ROOT_QUESTS, Quest
 from game.items import ITEMS
 
 INDENT_SIZE = 2
+
+
 def display_quest_chain(quest: Quest, chance: float = 100, indent: int = 0):
     indent_str = " " * indent
-    reqs_str = ", ".join([str(ITEMS[req.item_id].name.title()) for req in quest.requirements])
+    reqs_str = ", ".join([str(ITEMS[req.item_id].name.title())
+                         for req in quest.requirements])
     if len(quest.requirements) > 0:
         reqs_str = f"({reqs_str}) "
     chance_str = ""
@@ -15,16 +18,17 @@ def display_quest_chain(quest: Quest, chance: float = 100, indent: int = 0):
     for next_step in quest.next_steps:
         next_quest = QUESTS[next_step.quest_id]
         display_quest_chain(next_quest, next_step.chance, indent + INDENT_SIZE)
-    
+
+
 for quest, frequency in ROOT_QUESTS:
     display_quest_chain(quest)
 
 for item in ITEMS:
     print(f"{item.item_id}: {item.name.title()}, {item.plural.title()}")
-    
+
 # Frequency test
-test_frequency = 10 # minutes
-tick_rate = 5 # seconds
+test_frequency = 10  # minutes
+tick_rate = 5  # seconds
 
 frequency_seconds = test_frequency * 60
 frequency_ticks = frequency_seconds / tick_rate

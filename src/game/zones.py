@@ -2,10 +2,12 @@ import yaml
 from typing import List
 from dataclasses import dataclass
 
+
 @dataclass
 class ZoneConnection:
     zone_id: int
     frequency: float
+
 
 @dataclass
 class Zone:
@@ -14,6 +16,7 @@ class Zone:
     description: str
     public: bool
     connections: List[ZoneConnection]
+
 
 def load_zones() -> List[Zone]:
     with open("data/zones.yaml", mode="r") as f:
@@ -34,6 +37,7 @@ def load_zones() -> List[Zone]:
         zones.append(zone)
     zones.sort(key=lambda step: step.zone_id)
     return zones
+
 
 ZONES = load_zones()
 ZONES_BY_NAME = {zone.name: zone for zone in ZONES}
