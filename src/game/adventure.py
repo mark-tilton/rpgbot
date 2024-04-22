@@ -16,7 +16,7 @@ class AdventureStep:
     zones_discovered: list[int] = field(default_factory=list)
 
     def display(self) -> str:
-        display_lines = [f"{self.quest.prompt}"]
+        display_lines = [f"> - {self.quest.prompt}  "]
         inventories: list[tuple[str, Inventory]] = [
             ("+", self.items_gained),
             ("-", self.items_lost),
@@ -26,31 +26,41 @@ class AdventureStep:
                 item = ITEMS[item_id]
                 item_name = item.name if quantity == 1 else item.plural
                 item_name = item_name.title()
-                display_lines.append(f"      {sign}{quantity} {item_name}")
+                display_lines.append(f">     {sign}{quantity} {item_name}  ")
         for zone_id in self.zones_discovered:
             zone = ZONES[zone_id]
-            display_lines.append(f"      Discovered zone: {zone.name.title()}")
+            display_lines.append(f">     Discovered zone: {zone.name.title()}  ")
         return "\n".join(display_lines)
+
+
+@dataclass
+class AdventureGroup:
+    steps: list[AdventureStep]
 
 
 @dataclass
 class AdventureReport:
     start_time: int
     end_time: int
-    adventure_steps: list[AdventureStep]
+    adventure_groups: list[AdventureGroup]
     open_quests: list[int]
     finished_quests: list[int]
 
     def display(self) -> str:
         merged_steps: Mapping[int, list[AdventureStep]] = {}
         display_lines: list[str] = []
-        for step in self.adventure_steps:
-            if step.quest.merge:
-                if step.quest.quest_id not in merged_steps:
-                    merged_steps[step.quest.quest_id] = []
-                merged_steps[step.quest.quest_id].append(step)
-                continue
-            display_lines.append(step.display())
+        for adventure_group in self.adventure_groups:
+            group_gap = False
+            for step in adventure_group.steps:
+                if step.quest.merge:
+                    if step.quest.quest_id not in merged_steps:
+                        merged_steps[step.quest.quest_id] = []
+                    merged_steps[step.quest.quest_id].append(step)
+                    continue
+                group_gap = True
+                display_lines.append(step.display())
+            if group_gap:
+                display_lines.append("")
         for _, steps in merged_steps.items():
             first_step = steps[0]
             merged_step = AdventureStep(first_step.quest)
@@ -96,10 +106,10 @@ def process_quests(
         player_items.remove_inventory(completed_quest.items_lost)
         adventure_steps.append(
             AdventureStep(
-                new_quest,
-                completed_quest.items_gained,
-                completed_quest.items_lost,
-                completed_quest.zones_discovered,
+                quest=new_quest,
+                items_gained=completed_quest.items_gained,
+                items_lost=completed_quest.items_lost,
+                zones_discovered=completed_quest.zones_discovered,
             )
         )
         next_step = new_quest.choose_next_step(player_items, zone_id)
@@ -126,8 +136,8 @@ def process_adventure(
     open_quests = [QUESTS[quest_id] for quest_id in open_quest_ids]
     finished_quests: list[int] = []
 
-    adventure_steps: list[AdventureStep] = []
-    for _ in range(720):
+    adventure_groups: list[AdventureGroup] = []
+    for _ in range(7200):
         available_quests: list[Quest] = []
         removed_open_quests: list[int] = []
         for i, open_quest in enumerate(reversed(open_quests)):
@@ -143,7 +153,8 @@ def process_adventure(
             available_quests, player_items, zone_id
         )
         open_quests.extend(new_open_quests)
-        adventure_steps.extend(new_adventure_steps)
+        if len(new_adventure_steps) > 0:
+            adventure_groups.append(AdventureGroup(new_adventure_steps))
 
         # Try to start a new quest
         new_quests: list[Quest] = []
@@ -165,12 +176,13 @@ def process_adventure(
             new_quests, player_items, zone_id
         )
         open_quests.extend(new_open_quests)
-        adventure_steps.extend(new_adventure_steps)
+        if len(new_adventure_steps) > 0:
+            adventure_groups.append(AdventureGroup(new_adventure_steps))
 
     return AdventureReport(
         adventure.last_updated,
         current_time,
-        adventure_steps,
+        adventure_groups,
         [quest.quest_id for quest in open_quests],
         finished_quests,
     )

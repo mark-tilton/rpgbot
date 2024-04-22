@@ -45,13 +45,14 @@ class Game:
         )
         with self.storage_model as t:
             t.update_adventure(adventure.adventure_id, report.end_time)
-            for adventure_step in report.adventure_steps:
-                for item_id, quantity in adventure_step.items_gained.items.items():
-                    t.add_remove_item(user_id, item_id, quantity)
-                for item_id, quantity in adventure_step.items_lost.items.items():
-                    t.add_remove_item(user_id, item_id, -quantity)
-                for zone_id in adventure_step.zones_discovered:
-                    t.add_zone_access(user_id, zone_id)
+            for adventure_group in report.adventure_groups:
+                for adventure_step in adventure_group.steps:
+                    for item_id, quantity in adventure_step.items_gained.items.items():
+                        t.add_remove_item(user_id, item_id, quantity)
+                    for item_id, quantity in adventure_step.items_lost.items.items():
+                        t.add_remove_item(user_id, item_id, -quantity)
+                    for zone_id in adventure_step.zones_discovered:
+                        t.add_zone_access(user_id, zone_id)
             for finished_quest in report.finished_quests:
                 t.add_finished_quest(user_id, finished_quest)
             t.set_open_quests(user_id, report.open_quests)
