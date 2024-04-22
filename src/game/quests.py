@@ -53,6 +53,8 @@ class Quest:
     def complete_quest(self) -> CompletedQuest:
         items_gained = Inventory()
         for quest_reward in self.rewards:
+            if random.random() * 100 >= quest_reward.chance:
+                continue
             quantity = random.randint(*quest_reward.quantity)
             items_gained.add_item(quest_reward.item_id, quantity)
         items_lost = Inventory()

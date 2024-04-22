@@ -29,7 +29,7 @@
   frequency: 60
   next:
     - quest: find_camp_in_cave
-      chance: 70
+      chance: 40
     - quest: find_bear_in_cave
 
 - quest: find_camp_in_cave
@@ -37,8 +37,8 @@
   prompt: You peer inside the cave and find the remnants of an old camp. You are able to scavenge a few supplies.
   rewards:
     - item: gold
-      quantity: [1, 10]
-    - item: forest_treasure_map
+      quantity: [5, 20]
+    - item: shovel
       chance: 10
 
 - quest: find_bear_in_cave
@@ -60,7 +60,7 @@
       quantity: [20, 40]
       chance: 100
     - item: forest_treasure_map
-      chance: 50
+      chance: 40
 
 - quest: sneak_around_bear_success
   zone: forest
@@ -70,7 +70,7 @@
       quantity: [20, 40]
       chance: 100
     - item: forest_treasure_map
-      chance: 50
+      chance: 40
 
 - quest: sneak_around_bear_failure
   zone: forest
@@ -82,32 +82,49 @@
 - quest: start_forest_treasure_map
   zone: forest
   prompt: You look at the treasure map in your bag.
-  frequency: 15
+  frequency: 60
   reqs:
     - item: forest_treasure_map
+    - item: shovel
+      quantity: 0
+  next:
+    - quest: follow_forest_treasure_map_no_shovel
+
+- quest: follow_forest_treasure_map_no_shovel
+  zone: forest
+  prompt: You find the spot the map was pointing to but without a shovel you can't continue.
+
+- quest: start_forest_treasure_map_with_shovel
+  zone: forest
+  prompt: You look at the treasure map in your bag.
+  frequency: 5
+  reqs:
+    - item: forest_treasure_map
+    - item: shovel
   next:
     - quest: follow_forest_treasure_map_with_shovel
-    - quest: follow_forest_treasure_map_no_shovel
 
 - quest: follow_forest_treasure_map_with_shovel
   zone: forest
   prompt: You use your shovel to dig at the spot and find some treasure!
   reqs:
+    - item: forest_treasure_map
+      consume: Yes
     - item: shovel
   rewards:
     - item: gold
-      quantity: [50, 100]
+      quantity: [10, 20]
     - item: gold
-      quantity: [500, 1000]
+      quantity: [50, 100]
       chance: 10
     - item: small_lockbox
       chance: 70
     - item: small_key
       chance: 25
 
-- quest: follow_forest_treasure_map_no_shovel
-  zone: forest
-  prompt: You find the spot the map was pointing to but without a shovel you can't continue.
+# ========================
+# Discover mortia_farmland
+# ========================
 
 - quest: follow_road_east_from_forest
   zone: forest

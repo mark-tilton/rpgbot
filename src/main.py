@@ -95,20 +95,25 @@ async def handle_adventure_report(
     channel = interaction.channel
     if not isinstance(channel, discord.TextChannel):
         return
-    await send_adventure_report(channel, report)
+    await send_adventure_report(channel, user.display_name, report)
 
 
-async def send_adventure_report(channel: discord.TextChannel, report: AdventureReport):
+async def send_adventure_report(
+    channel: discord.TextChannel, user_name: str, report: AdventureReport
+):
     # Send report
+    thread = await channel.create_thread(
+        name=f"{user_name}'s adventure report", type=discord.ChannelType.public_thread
+    )
     messages: list[list[str]] = []
     report_lines = report.display().splitlines()
     current_message = []
     message_length = 0
     for line in report_lines:
         line_length = len(line) + 2
-        if line_length + message_length > 1800:
+        if line_length + message_length > 1000 and line == "":
             messages.append(current_message)
-            current_message = [line]
+            current_message = ["_ _"]
             message_length = line_length
             continue
         current_message.append(line)
@@ -117,7 +122,8 @@ async def send_adventure_report(channel: discord.TextChannel, report: AdventureR
     for message in messages:
         if len(message) == 0:
             continue
-        await channel.send("\n".join(message))
+        await thread.send("\n".join(message))
+    await thread.edit(archived=True)
 
 
 @tree.command(
