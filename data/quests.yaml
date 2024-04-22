@@ -11,125 +11,114 @@
 # ===================
 # Mergable activities
 # ===================
-- quest: 12
-  zone: 0
-  prompt: You find {i7pl} while foraging in the forest.
+- quest: forage_berries_forest
+  zone: forest
+  prompt: You find berries while foraging in the forest.
   frequency: 3
   merge: Yes
   rewards:
-    - item: 7
+    - item: berry
       quantity: [1, 3]
 
 # ====================
 # A cave in the forest
 # ====================
-- quest: 0
-  zone: 0
+- quest: find_cave_forest
+  zone: forest
   prompt: While walking in the forest you spot a small cave.
   frequency: 60
   next:
-    - quest: 1
-      chance: 30
-    - quest: 3
+    - quest: find_camp_in_cave
+      chance: 70
+    - quest: find_bear_in_cave
 
-- quest: 1
-  zone: 0
+- quest: find_camp_in_cave
+  zone: forest
   prompt: You peer inside the cave and find the remnants of an old camp. You are able to scavenge a few supplies.
   rewards:
-    - item: 0
+    - item: gold
       quantity: [1, 10]
-    - item: 2
-      chance: 50
+    - item: forest_treasure_map
+      chance: 10
 
-- quest: 3
-  zone: 0
+- quest: find_bear_in_cave
+  zone: forest
   prompt: You find a sleeping bear inside guarding a chest.
   next:
-    - quest: 4
-    - quest: 5
+    - quest: sneak_around_bear_boots
+    - quest: sneak_around_bear_success
+      chance: 30
+    - quest: sneak_around_bear_failure
 
-- quest: 4
-  zone: 0
-  prompt: You use your {i1st} to sneak around the bear and loot the chest.
+- quest: sneak_around_bear_boots
+  zone: forest
+  prompt: You use your boots of soft-step to sneak around the bear and loot the chest.
   reqs:
-    - item: 1
+    - item: boots_of_soft-step
   rewards:
-    - item: 0
+    - item: gold
       quantity: [20, 40]
       chance: 100
-    - item: 2
+    - item: forest_treasure_map
       chance: 50
 
-- quest: 5
-  zone: 0
-  prompt: You try to sneak around the bear but your boots make a loud noise. The bear wakes and chases you out of the cave.
+- quest: sneak_around_bear_success
+  zone: forest
+  prompt: You successfully sneak around the bear and loot the chest.
+  rewards:
+    - item: gold
+      quantity: [20, 40]
+      chance: 100
+    - item: forest_treasure_map
+      chance: 50
+
+- quest: sneak_around_bear_failure
+  zone: forest
+  prompt: You fail to sneak around the bear and the bear chases you out of the cave.
 
 # ===============================
 # Reading the forest treasure map
 # ===============================
-- quest: 6
-  zone: 0
+- quest: start_forest_treasure_map
+  zone: forest
   prompt: You look at the treasure map in your bag.
-  frequency: 0
+  frequency: 15
   reqs:
-    - item: 2
+    - item: forest_treasure_map
   next:
-    - quest: 7
-      chance: 30
-    - quest: 8
+    - quest: follow_forest_treasure_map_with_shovel
+    - quest: follow_forest_treasure_map_no_shovel
 
-- quest: 7
-  zone: 0
-  prompt: You have no idea where the map could be pointing. You put the map back in your bag.
-
-- quest: 8
-  zone: 0
-  prompt: You recognize the area this map is depicting and travel to the marked location.
+- quest: follow_forest_treasure_map_with_shovel
+  zone: forest
+  prompt: You use your shovel to dig at the spot and find some treasure!
   reqs:
-    - item: 2
-      consume: Yes
-  next:
-    - quest: 11
-    - quest: 9
-
-- quest: 9
-  zone: 0
-  prompt: You find the spot the map was pointing to but without a {i3sl} you can't continue.
-  hold_open: Yes
-  next:
-    - quest: 10
-
-- quest: 10
-  zone: 0
-  prompt: You return to the spot marked on the treasure map from earlier.
-  reqs:
-    - item: 3
-  next:
-    - quest: 11
-
-- quest: 11
-  zone: 0
-  prompt: You use your {i3sl} to dig at the spot and find some treasure!
-  reqs:
-    - item: 3
+    - item: shovel
   rewards:
-    - item: 0
-      quantity: [400, 800]
-    - item: 4
+    - item: gold
+      quantity: [50, 100]
+    - item: gold
+      quantity: [500, 1000]
+      chance: 10
+    - item: small_lockbox
       chance: 70
-    - item: 5
+    - item: small_key
       chance: 25
 
-- quest: 13
-  zone: 0
+- quest: follow_forest_treasure_map_no_shovel
+  zone: forest
+  prompt: You find the spot the map was pointing to but without a shovel you can't continue.
+
+- quest: follow_road_east_from_forest
+  zone: forest
   prompt: You follow a road east into a clearing.
-  frequency: 0
+  frequency: 60
   repeatable: No
   next:
-    - quest: 14
+    - quest: discover_mortia_farmlands
 
-- quest: 14
-  zone: 0
+- quest: discover_mortia_farmlands
+  zone: forest
   prompt: Beyond the clearing you see vast farmlands surrounding a large city.
   rewards:
-    - zone: 1
+    - zone: mortia_farmland

@@ -1,38 +1,27 @@
-- zone: 0
-  name: forest
+- zone: forest
   description: A quiet forest
   public: true
-  connections:
-    - zone: 1
-      frequency: 60 # Expected to discover this connection in n minutes
 
-- zone: 1
-  name: mortia-farmland
+- zone: mortia_farmland
   description: Vast farmland beyond the outskirts of the city of mortia.
 
-- zone: 2
-  name: mortia-outskirts
+- zone: mortia_outskirts
   description: The outskirts beyond the walls of the city of mortia.
 
-- zone: 3
-  name: lower-mortia
+- zone: lower_mortia
   description: Just inside the walls of the city of mortia.
 
-- zone: 4
-  name: upper-mortia
+- zone: upper_mortia
   description: Beyond another set of walls, upper mortia is home to many wealthy residents of mortia.
 
-- zone: 5
-  name: mortia-castle
+- zone: mortia_castle
   description: A large stone castle in the center of mortia.
 
 # Connects mortia with the dwarven cities built into the mountains
-- zone: 6
-  name: mortia-river-path
+- zone: mortia_river_path
   description: A dirt path following alongside a river.
 
-- zone: 7
-  name: riverbend-village
+- zone: riverbend_village
   description: A humble riverside village
 # Climb the mountain
 # Explore deeper into the mines

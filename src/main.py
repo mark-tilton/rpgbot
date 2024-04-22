@@ -7,7 +7,7 @@ from discord.app_commands import CommandTree
 from game.adventure import AdventureReport
 from game.game import Game
 from game.items import ITEMS
-from game.zones import ZONES, ZONES_BY_NAME, Zone
+from game.zones import ZONES, Zone
 
 guild_id = 1229078590713364602
 
@@ -21,7 +21,7 @@ tree = CommandTree(client)
 game = Game()
 
 channel_to_zone: Mapping[int, Zone] = {}
-zone_to_channel: Mapping[int, int] = {}
+zone_to_channel: Mapping[str, int] = {}
 
 
 @client.event
@@ -31,9 +31,9 @@ async def on_ready():
     guild = client.get_guild(guild_id)
     if guild is None or guild.self_role is None:
         raise Exception("Invalid Guild")
-    found_zones: set[int] = set()
+    found_zones: set[str] = set()
     for channel in guild.channels:
-        zone = ZONES_BY_NAME.get(channel.name, None)
+        zone = ZONES.get(channel.name, None)
         if zone is not None:
             channel_to_zone[channel.id] = zone
             zone_to_channel[zone.zone_id] = channel.id
@@ -52,13 +52,13 @@ async def on_ready():
     self_overwrite = discord.PermissionOverwrite()
     self_overwrite.view_channel = True
     self_overwrite.manage_channels = True
-    for zone in ZONES:
-        if zone.zone_id in found_zones:
+    for zone_id, zone in ZONES.items():
+        if zone_id in found_zones:
             continue
         hidden_overwrite = discord.PermissionOverwrite()
         hidden_overwrite.view_channel = zone.public
         channel = await guild.create_text_channel(
-            zone.name,
+            zone_id,
             overwrites={
                 guild.roles[0]: hidden_overwrite,
                 guild.self_role: self_overwrite,
@@ -167,7 +167,7 @@ async def inventory(interaction: discord.Interaction):
 @tree.command(
     name="give", description="Give yourself an item", guild=discord.Object(id=guild_id)
 )
-async def give(interaction: discord.Interaction, item_id: int, quantity: int):
+async def give(interaction: discord.Interaction, item_id: str, quantity: int):
     user = interaction.user
 
     with game.storage_model as t:

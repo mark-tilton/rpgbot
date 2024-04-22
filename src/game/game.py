@@ -11,7 +11,7 @@ class Game:
     def __init__(self):
         self.storage_model = StorageModel()
 
-    def start_adventure(self, user_id: int, zone_id: int) -> AdventureReport | None:
+    def start_adventure(self, user_id: int, zone_id: str) -> AdventureReport | None:
         with self.storage_model as t:
             start_time = floor(time.time())
             current_adventure = self.storage_model.get_current_adventure(user_id)
@@ -58,28 +58,28 @@ class Game:
             t.set_open_quests(user_id, report.open_quests)
         return report
 
-    def add_zone_access(self, user_id: int, zone_id: int):
+    def add_zone_access(self, user_id: int, zone_id: str):
         with self.storage_model as t:
             t.add_zone_access(user_id, zone_id)
 
-    def add_finished_quests(self, user_id: int, quest_id: int):
+    def add_finished_quests(self, user_id: int, quest_id: str):
         with self.storage_model as t:
             t.add_finished_quest(user_id, quest_id)
 
     def get_player_items(self, user_id: int) -> Inventory:
         return Inventory(dict(self.storage_model.get_player_items(user_id=user_id)))
 
-    def get_open_quests(self, user_id: int) -> list[int]:
+    def get_open_quests(self, user_id: int) -> list[str]:
         return self.storage_model.get_open_quests(user_id)
 
-    def get_player_zone(self, user_id: int) -> int | None:
+    def get_player_zone(self, user_id: int) -> str | None:
         return self.storage_model.get_player_zone(user_id)
 
     def get_adventure_info(self, user_id: int) -> Adventure | None:
         return self.storage_model.get_current_adventure(user_id)
 
-    def get_player_zone_access(self, user_id: int) -> set[int]:
+    def get_player_zone_access(self, user_id: int) -> set[str]:
         return set(self.storage_model.get_player_zone_access(user_id))
 
-    def get_finished_quests(self, user_id: int) -> set[int]:
+    def get_finished_quests(self, user_id: int) -> set[str]:
         return set(self.storage_model.get_finished_quests(user_id))

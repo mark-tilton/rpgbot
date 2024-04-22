@@ -13,7 +13,7 @@ class StorageTransaction:
     def cancel(self):
         self._rollback = True
 
-    def start_adventure(self, user_id: int, zone_id: int, start_time: int) -> Adventure:
+    def start_adventure(self, user_id: int, zone_id: str, start_time: int) -> Adventure:
         self._cursor.execute(
             "INSERT INTO player_adventure VALUES(?, ?, ?, ?)",
             (None, user_id, zone_id, start_time),
@@ -37,7 +37,7 @@ class StorageTransaction:
             (last_updated, adventure_id),
         )
 
-    def add_remove_item(self, user_id: int, item_id: int, quantity: int) -> bool:
+    def add_remove_item(self, user_id: int, item_id: str, quantity: int) -> bool:
         if quantity == 0:
             return True
         result = self._cursor.execute(
@@ -74,24 +74,24 @@ class StorageTransaction:
         )
         return True
 
-    def set_open_quests(self, user_id: int, quests: list[int]):
+    def set_open_quests(self, user_id: int, quests: list[str]):
         self._cursor.execute("DELETE FROM open_quests WHERE user_id = ?", (user_id,))
         self._cursor.executemany(
             "INSERT INTO open_quests VALUES(?, ?, ?)",
             ((user_id, quest, i) for i, quest in enumerate(quests)),
         )
 
-    def set_player_zone(self, user_id: int, zone_id: int, arrival_time: int):
+    def set_player_zone(self, user_id: int, zone_id: str, arrival_time: int):
         self._cursor.execute(
             "INSERT INTO player_zone VALUES(?, ?, ?)", (user_id, zone_id, arrival_time)
         )
 
-    def add_zone_access(self, user_id: int, zone_id: int):
+    def add_zone_access(self, user_id: int, zone_id: str):
         self._cursor.execute(
             "INSERT INTO player_zone_access VALUES(?, ?)", (user_id, zone_id)
         )
 
-    def add_finished_quest(self, user_id: int, quest_id: int):
+    def add_finished_quest(self, user_id: int, quest_id: str):
         self._cursor.execute(
             "INSERT INTO finished_quests VALUES(?, ?)", (user_id, quest_id)
         )
@@ -105,41 +105,41 @@ class StorageModel:
             CREATE TABLE IF NOT EXISTS player_adventure(
                 adventure_id INTEGER PRIMARY KEY ASC,
                 user_id INT,
-                zone_id INT,
+                zone_id STR,
                 last_updated INT
             )
             """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS player_zone(
                 user_id INT,
-                zone_id INT,
+                zone_id STR,
                 arrival_time INT
             )
             """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS player_zone_access(
                 user_id INT,
-                zone_id INT
+                zone_id STR
             )
             """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS open_quests(
                 user_id INT,
-                quest_step_id INT,
+                quest_step_id STR,
                 order_idx INT
             )
             """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS player_items(
                 user_id INT,
-                item_id INT,
+                item_id STR,
                 quantity INT
             )
             """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS finished_quests(
                 user_id INT,
-                quest_id INT
+                quest_id STR
             )
             """)
 
@@ -162,7 +162,7 @@ class StorageModel:
                 self._connection.commit()
             self._transaction = None
 
-    def get_player_items(self, user_id: int) -> Mapping[int, int]:
+    def get_player_items(self, user_id: int) -> Mapping[str, int]:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
@@ -174,14 +174,14 @@ class StorageModel:
         """,
             (user_id,),
         )
-        items: Mapping[int, int] = {}
+        items: Mapping[str, int] = {}
         for item_id, quantity in result.fetchall():
             if quantity <= 0:
                 continue
             items[item_id] = quantity
         return items
 
-    def get_item_quantity(self, user_id: int, item_id: int) -> int:
+    def get_item_quantity(self, user_id: int, item_id: str) -> int:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
@@ -219,7 +219,7 @@ class StorageModel:
             last_updated=last_updated,
         )
 
-    def get_player_zone(self, user_id: int) -> int | None:
+    def get_player_zone(self, user_id: int) -> str | None:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
@@ -238,7 +238,7 @@ class StorageModel:
         zone_id, _ = row
         return zone_id
 
-    def get_player_zone_access(self, user_id: int) -> list[int]:
+    def get_player_zone_access(self, user_id: int) -> list[str]:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
@@ -250,7 +250,7 @@ class StorageModel:
         )
         return [zone_id[0] for zone_id in result.fetchall()]
 
-    def get_open_quests(self, user_id: int) -> list[int]:
+    def get_open_quests(self, user_id: int) -> list[str]:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
@@ -265,7 +265,7 @@ class StorageModel:
         )
         return [step_id for step_id, _ in result.fetchall()]
 
-    def get_finished_quests(self, user_id: int) -> list[int]:
+    def get_finished_quests(self, user_id: int) -> list[str]:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """

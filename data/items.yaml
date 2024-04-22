@@ -1,31 +1,23 @@
-- item: 0
-  name: gold
+- item: gold
   plural: gold
 
-- item: 1
-  name: boots of soft-step
+- item: boots_of_soft-step
   plural: boots of soft-step
   category: equipment
 
-- item: 2
-  name: forest treasure map
+- item: forest_treasure_map
   category: quest item
 
-- item: 3
-  name: shovel
+- item: shovel
   category: tool
 
-- item: 4
-  name: small lockbox
+- item: small_lockbox
   plural: small lockboxes
 
-- item: 5
-  name: small key
+- item: small_key
 
-- item: 6
-  name: simple lockpicking set
+- item: simple_lockpicking_set
 
-- item: 7
-  name: berry
+- item: berry
   plural: berries
   category: food

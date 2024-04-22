@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 import yaml
@@ -5,16 +6,16 @@ import yaml
 
 @dataclass
 class Item:
-    item_id: int
+    item_id: str
     name: str
     plural: str
 
 
 @dataclass
 class Inventory:
-    items: dict[int, int] = field(default_factory=dict)
+    items: dict[str, int] = field(default_factory=dict)
 
-    def add_item(self, item_id: int, quantity: int):
+    def add_item(self, item_id: str, quantity: int):
         if quantity <= 0:
             return
         if item_id not in self.items:
@@ -22,7 +23,7 @@ class Inventory:
             return
         self.items[item_id] += quantity
 
-    def remove_item(self, item_id: int, quantity: int) -> bool:
+    def remove_item(self, item_id: str, quantity: int) -> bool:
         if quantity <= 0:
             return True
         if item_id not in self.items:
@@ -44,38 +45,19 @@ class Inventory:
         return True
 
 
-def load_items() -> list[Item]:
+def load_items() -> Mapping[str, Item]:
     with open("data/items.yaml", mode="r") as f:
         item_list_yaml = yaml.safe_load(f)
-    items: list[Item] = []
+    items: dict[str, Item] = {}
     for item_yaml in item_list_yaml:
-        item_id = item_yaml["item"]
-        name = item_yaml["name"].lower()
-        plural = item_yaml.get("plural", name + "s").lower()
+        item_id: str = item_yaml["item"]
+        name: str = item_yaml.get("name", item_id.replace("_", " ")).lower()
+        plural: str = item_yaml.get("plural", name + "s").lower()
         item = Item(item_id, name, plural)
-        items.append(item)
-    items.sort(key=lambda step: step.item_id)
+        if item_id in items:
+            raise Exception(f"Duplicate item id found: {item_id}")
+        items[item_id] = item
     return items
 
 
-def build_format_dictionary(items: list[Item]) -> dict[str, str]:
-    plural_options = ["s", "p"]
-    casing_options = ["l", "c", "t"]
-    item_format_dict: dict[str, str] = {}
-    for item in items:
-        for plural in plural_options:
-            for casing in casing_options:
-                key = f"i{item.item_id}{plural}{casing}"
-                value = item.name if plural == "s" else item.plural
-                if casing == "l":
-                    value = value.lower()
-                elif casing == "c":
-                    value = value.capitalize()
-                elif casing == "t":
-                    value = value.title()
-                item_format_dict[key] = value
-    return item_format_dict
-
-
 ITEMS = load_items()
-ITEM_FORMAT_DICT = build_format_dictionary(ITEMS)

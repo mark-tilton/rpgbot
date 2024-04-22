@@ -13,7 +13,7 @@ class AdventureStep:
     quest: Quest
     items_gained: Inventory = field(default_factory=Inventory)
     items_lost: Inventory = field(default_factory=Inventory)
-    zones_discovered: list[int] = field(default_factory=list)
+    zones_discovered: list[str] = field(default_factory=list)
 
     def display(self) -> str:
         display_lines = [f"> - {self.quest.prompt}  "]
@@ -43,11 +43,11 @@ class AdventureReport:
     start_time: int
     end_time: int
     adventure_groups: list[AdventureGroup]
-    open_quests: list[int]
-    finished_quests: list[int]
+    open_quests: list[str]
+    finished_quests: list[str]
 
     def display(self) -> str:
-        merged_steps: Mapping[int, list[AdventureStep]] = {}
+        merged_steps: Mapping[str, list[AdventureStep]] = {}
         display_lines: list[str] = []
         for adventure_group in self.adventure_groups:
             group_gap = False
@@ -84,7 +84,7 @@ class QuestCompletion:
 class Adventure:
     adventure_id: int
     user_id: int
-    zone_id: int
+    zone_id: str
     last_updated: int
 
 
@@ -94,7 +94,7 @@ TICK_RATE = 5  # One tick every 5 seconds
 
 
 def process_quests(
-    quests: list[Quest], player_items: Inventory, zone_id: int
+    quests: list[Quest], player_items: Inventory, zone_id: str
 ) -> tuple[list[AdventureStep], list[Quest]]:
     adventure_steps: list[AdventureStep] = []
     open_quests: list[Quest] = []
@@ -123,9 +123,9 @@ def process_quests(
 
 def process_adventure(
     player_items: Inventory,
-    open_quest_ids: list[int],
-    zone_id: int,
-    locked_quests: set[int],
+    open_quest_ids: list[str],
+    zone_id: str,
+    locked_quests: set[str],
     adventure: Adventure,
 ) -> AdventureReport:
     current_time = int(time.time())
@@ -134,7 +134,7 @@ def process_adventure(
     current_time = adventure.last_updated + num_ticks * TICK_RATE
 
     open_quests = [QUESTS[quest_id] for quest_id in open_quest_ids]
-    finished_quests: list[int] = []
+    finished_quests: list[str] = []
 
     adventure_groups: list[AdventureGroup] = []
     for _ in range(7200):

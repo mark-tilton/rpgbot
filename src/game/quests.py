@@ -4,41 +4,42 @@ from dataclasses import dataclass
 
 import yaml
 
-from .items import ITEM_FORMAT_DICT, Inventory
+from .items import ITEMS, Inventory
+from .zones import ZONES
 
 
 @dataclass(frozen=True)
 class QuestItemRequirement:
-    item_id: int
+    item_id: str
     quantity: int
     consume: bool
 
 
 @dataclass(frozen=True)
 class QuestReward:
-    item_id: int
+    item_id: str
     quantity: tuple[int, int]
     chance: float
 
 
 @dataclass(frozen=True)
 class CompletedQuest:
-    quest_id: int
+    quest_id: str
     items_gained: Inventory
     items_lost: Inventory
-    zones_discovered: list[int]
+    zones_discovered: list[str]
 
 
 @dataclass(frozen=True)
 class QuestNextStep:
-    quest_id: int
+    quest_id: str
     chance: float
 
 
 @dataclass(frozen=True)
 class Quest:
-    quest_id: int
-    zone_id: int
+    quest_id: str
+    zone_id: str
     prompt: str
     frequency: float | None
     repeatable: bool
@@ -46,7 +47,7 @@ class Quest:
     hold_open: bool
     requirements: list[QuestItemRequirement]
     rewards: list[QuestReward]
-    zone_unlocks: list[int]
+    zone_unlocks: list[str]
     next_steps: list[QuestNextStep]
 
     def complete_quest(self) -> CompletedQuest:
@@ -66,7 +67,7 @@ class Quest:
             zones_discovered=self.zone_unlocks,
         )
 
-    def check_quest_requirements(self, player_items: Inventory, zone_id: int) -> bool:
+    def check_quest_requirements(self, player_items: Inventory, zone_id: str) -> bool:
         if zone_id != self.zone_id:
             return False
         for item_req in self.requirements:
@@ -77,7 +78,7 @@ class Quest:
                 return False
         return True
 
-    def choose_next_step(self, player_items: Inventory, zone_id: int) -> "Quest | None":
+    def choose_next_step(self, player_items: Inventory, zone_id: str) -> "Quest | None":
         for step in self.next_steps:
             quest = QUESTS[step.quest_id]
             if not quest.check_quest_requirements(player_items, zone_id):
@@ -89,48 +90,53 @@ class Quest:
 
 # TODO Add quest file validation to check for
 # duplicated ids, extra fields, etc...
-def load_quests() -> Mapping[int, Quest]:
+def load_quests() -> Mapping[str, Quest]:
     with open("data/quests.yaml", mode="r") as f:
         quest_list_yaml = yaml.safe_load(f)
 
-    quests: dict[int, Quest] = {}
+    quests: dict[str, Quest] = {}
     for quest_yaml in quest_list_yaml:
-        quest_id = quest_yaml["quest"]
-        zone = quest_yaml["zone"]
-        prompt = quest_yaml["prompt"].format(**ITEM_FORMAT_DICT)
-        frequency = quest_yaml.get("frequency", None)
-        repeatable = quest_yaml.get("repeatable", True)
-        merge = quest_yaml.get("merge", False)
-        hold_open = quest_yaml.get("hold_open", False)
+        quest_id: str = quest_yaml["quest"]
+        zone: str = quest_yaml["zone"]
+        prompt: str = quest_yaml["prompt"]
+        frequency: float = quest_yaml.get("frequency", None)
+        repeatable: bool = quest_yaml.get("repeatable", True)
+        merge: bool = quest_yaml.get("merge", False)
+        hold_open: bool = quest_yaml.get("hold_open", False)
 
         requirements: list[QuestItemRequirement] = []
         for quest_requirement_yaml in quest_yaml.get("reqs", []):
-            item_id = quest_requirement_yaml["item"]
-            quantity = quest_requirement_yaml.get("quantity", 1)
-            consume = quest_requirement_yaml.get("consume", False)
-            quest_requirement = QuestItemRequirement(item_id, quantity, consume)
+            item_id: str = quest_requirement_yaml["item"]
+            if item_id not in ITEMS:
+                raise Exception(f"Invalid item_id found: {item_id}")
+            req_quantity: int = quest_requirement_yaml.get("quantity", 1)
+            consume: bool = quest_requirement_yaml.get("consume", False)
+            quest_requirement = QuestItemRequirement(item_id, req_quantity, consume)
             requirements.append(quest_requirement)
 
         rewards: list[QuestReward] = []
-        zone_unlocks: list[int] = []
+        zone_unlocks: list[str] = []
         for quest_reward_yaml in quest_yaml.get("rewards", []):
-            item_id = quest_reward_yaml.get("item", None)
+            item_id: str = quest_reward_yaml.get("item", None)
             if item_id is None:
-                zone_id = quest_reward_yaml["zone"]
+                zone_id: str = quest_reward_yaml["zone"]
+                if zone_id not in ZONES:
+                    raise Exception(f"Invalid zone_id found: {zone_id}")
                 zone_unlocks.append(zone_id)
                 continue
-            quantity = quest_reward_yaml.get("quantity", 1)
+            if item_id not in ITEMS:
+                raise Exception(f"Invalid item_id found: {item_id}")
+            quantity: int | tuple[int, int] = quest_reward_yaml.get("quantity", 1)
             if isinstance(quantity, int):
-                quantity = [quantity, quantity]
-            quantity = (quantity[0], quantity[1])
-            chance = quest_reward_yaml.get("chance", 100)
+                quantity = (quantity, quantity)
+            chance: float = quest_reward_yaml.get("chance", 100)
             quest_reward = QuestReward(item_id, quantity, chance)
             rewards.append(quest_reward)
 
         next_steps: list[QuestNextStep] = []
         for next_step_yaml in quest_yaml.get("next", []):
-            next_quest_id = next_step_yaml["quest"]
-            chance = next_step_yaml.get("chance", 100)
+            next_quest_id: str = next_step_yaml["quest"]
+            chance: float = next_step_yaml.get("chance", 100)
             next_step = QuestNextStep(next_quest_id, chance)
             next_steps.append(next_step)
 
@@ -147,6 +153,8 @@ def load_quests() -> Mapping[int, Quest]:
             zone_unlocks=zone_unlocks,
             next_steps=next_steps,
         )
+        if quest_id in quests:
+            raise Exception(f"Duplicate quest id found: {quest_id}")
         quests[quest_id] = quest
     return quests
 
