@@ -1,0 +1,49 @@
+# ===================
+# Mergable activities
+# ===================
+- quest: help_farmers_farmlands
+  zone: farmlands
+  prompt: You help local farmers tend their fields.
+  frequency: 8
+  merge: Yes
+  rewards:
+    - item: gold
+      quantity: [10, 30]
+
+# ======
+# Events
+# ======
+- quest: buy_shovel
+  zone: farmlands
+  prompt: An old farmer offers to sell you his shovel.
+  interactions:
+    - option: Buy
+      reqs:
+        - item: gold
+          quantity: 100
+          consume: Yes
+      rewards:
+        - item: shovel
+    - option: "No"
+
+- quest: buy_shovel_offer
+  zone: farmlands
+  prompt: An old farmer offers to sell you his shovel.
+  next:
+    - quest: buy_shovel_accept
+      interaction: Buy
+    - quest: "No"
+
+- quest: buy_shovel_accept
+  zone: farmlands
+  prompt: You buy the farmer's shovel.
+  reqs:
+    - item: gold
+      quantity: 100
+      consume: Yes
+  rewards:
+    - item: shovel
+
+- quest: buy_shovel_decline
+  zone: farmlands
+  prompt: You decline the farmer's offer

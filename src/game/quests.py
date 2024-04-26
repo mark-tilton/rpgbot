@@ -1,3 +1,4 @@
+import os
 import random
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -93,8 +94,15 @@ class Quest:
 # TODO Add quest file validation to check for
 # duplicated ids, extra fields, etc...
 def load_quests() -> Mapping[str, Quest]:
-    with open("data/quests.yaml", mode="r") as f:
-        quest_list_yaml = yaml.safe_load(f)
+    zone_dir = "data/zones"
+    files = os.listdir(zone_dir)
+    quest_files = []
+    for file in files:
+        with open(f"{zone_dir}/{file}", mode="r") as f:
+            quest_files.append(yaml.safe_load(f))
+
+    quest_list_yaml = [quest for file in quest_files for quest in file]
+    print(quest_list_yaml)
 
     quests: dict[str, Quest] = {}
     for quest_yaml in quest_list_yaml:
