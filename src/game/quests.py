@@ -6,7 +6,8 @@ from typing import Any
 
 import yaml
 
-from .items import ITEMS, Inventory
+from .tags import Inventory
+from .items import ITEMS
 from .zones import ZONES
 
 
@@ -58,12 +59,12 @@ class Quest:
             if random.random() * 100 >= quest_reward.chance:
                 continue
             quantity = random.randint(*quest_reward.quantity)
-            items_gained.add_item(quest_reward.item_id, quantity)
+            items_gained.add_tag(quest_reward.item_id, quantity)
         items_lost = Inventory()
         for req in self.requirements:
             if not req.consume:
                 continue
-            items_lost.add_item(req.item_id, req.quantity)
+            items_lost.add_tag(req.item_id, req.quantity)
         return CompletedQuest(
             quest_id=self.quest_id,
             items_gained=items_gained,
@@ -75,7 +76,7 @@ class Quest:
         if zone_id != self.zone_id:
             return False
         for item_req in self.requirements:
-            player_quantity = player_items.items.get(item_req.item_id, 0)
+            player_quantity = player_items.tags.get(item_req.item_id, 0)
             if item_req.quantity == 0 and player_quantity > 0:
                 return False
             if player_quantity < item_req.quantity:

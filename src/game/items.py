@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import yaml
 
@@ -9,40 +9,6 @@ class Item:
     item_id: str
     name: str
     plural: str
-
-
-@dataclass
-class Inventory:
-    items: dict[str, int] = field(default_factory=dict)
-
-    def add_item(self, item_id: str, quantity: int):
-        if quantity <= 0:
-            return
-        if item_id not in self.items:
-            self.items[item_id] = quantity
-            return
-        self.items[item_id] += quantity
-
-    def remove_item(self, item_id: str, quantity: int) -> bool:
-        if quantity <= 0:
-            return True
-        if item_id not in self.items:
-            return False
-        current_quantity = self.items[item_id]
-        if current_quantity < quantity:
-            return False
-        self.items[item_id] = current_quantity - quantity
-        return True
-
-    def add_inventory(self, inventory: "Inventory"):
-        for item_id, quantity in inventory.items.items():
-            self.add_item(item_id, quantity)
-
-    def remove_inventory(self, inventory: "Inventory") -> bool:
-        for item_id, quantity in inventory.items.items():
-            if not self.remove_item(item_id, quantity):
-                return False
-        return True
 
 
 def load_items() -> Mapping[str, Item]:

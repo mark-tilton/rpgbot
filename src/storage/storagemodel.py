@@ -1,13 +1,8 @@
 import sqlite3
-from collections.abc import Mapping
-from enum import Enum
 from sqlite3 import Cursor
 
 from game.adventure import Adventure
-
-
-class TagType(Enum):
-    ITEM = "item"
+from game.tags import TagType, TagCollection
 
 
 class StorageTransaction:
@@ -169,7 +164,7 @@ class StorageModel:
             last_updated=last_updated,
         )
 
-    def get_player_tags(self, user_id: int) -> Mapping[TagType, Mapping[str, int]]:
+    def get_player_tags(self, user_id: int) -> TagCollection:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
@@ -183,13 +178,11 @@ class StorageModel:
             (user_id,),
         )
 
-        tag_type_map: dict[TagType, dict[str, int]] = {}
-        for tag, quantity, tag_type in result.fetchall():
-            tag_quantity = tag_type_map.get(TagType(tag_type), {})
-            tag_quantity[tag] = quantity
-            tag_type_map[TagType(tag_type)] = tag_quantity
-
-        return tag_type_map
+        tag_collection = TagCollection()
+        for tag, quantity, type in result.fetchall():
+            tag_type = TagType(type)
+            tag_collection.add_tag(tag_type, tag, quantity)
+        return tag_collection
 
     def get_player_zone_access(self, user_id: int) -> list[str]:
         cursor = self._connection.cursor()

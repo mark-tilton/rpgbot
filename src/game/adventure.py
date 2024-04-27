@@ -3,8 +3,9 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from .items import ITEMS, Inventory
+from .items import ITEMS
 from .quests import QUESTS, ROOT_QUESTS, Quest
+from .tags import Inventory
 from .zones import ZONES
 
 
@@ -24,7 +25,7 @@ class AdventureStep:
             ("-", self.items_lost),
         ]
         for sign, inventory in inventories:
-            for item_id, quantity in inventory.items.items():
+            for item_id, quantity in inventory.tags.items():
                 item = ITEMS[item_id]
                 item_name = item.name if quantity == 1 else item.plural
                 item_name = item_name.title()
@@ -67,10 +68,10 @@ class AdventureReport:
             first_step = steps[0]
             merged_step = AdventureStep(first_step.quest)
             for step in steps:
-                for item, quantity in step.items_gained.items.items():
-                    merged_step.items_gained.add_item(item, quantity)
-                for item, quantity in step.items_lost.items.items():
-                    merged_step.items_lost.add_item(item, quantity)
+                for item, quantity in step.items_gained.tags.items():
+                    merged_step.items_gained.add_tag(item, quantity)
+                for item, quantity in step.items_lost.tags.items():
+                    merged_step.items_lost.add_tag(item, quantity)
             display_lines.append(merged_step.display())
 
         return "\n".join(display_lines)

@@ -4,7 +4,7 @@ from math import floor
 from storage.storagemodel import StorageModel, TagType
 
 from .adventure import Adventure, AdventureReport, process_adventure
-from .items import Inventory
+from .tags import Inventory
 
 
 class Game:
@@ -42,9 +42,9 @@ class Game:
             t.update_adventure(adventure.adventure_id, report.end_time)
             for adventure_group in report.adventure_groups:
                 for adventure_step in adventure_group.steps:
-                    for item_id, quantity in adventure_step.items_gained.items.items():
+                    for item_id, quantity in adventure_step.items_gained.tags.items():
                         t.add_remove_tag(user_id, TagType.ITEM, item_id, quantity)
-                    for item_id, quantity in adventure_step.items_lost.items.items():
+                    for item_id, quantity in adventure_step.items_lost.tags.items():
                         t.add_remove_tag(user_id, TagType.ITEM, item_id, -quantity)
                     for zone_id in adventure_step.zones_discovered:
                         t.add_zone_access(user_id, zone_id)
@@ -55,12 +55,8 @@ class Game:
             t.add_zone_access(user_id, zone_id)
 
     def get_player_items(self, user_id: int) -> Inventory:
-        return Inventory(
-            dict(
-                self.storage_model.get_player_tags(user_id=user_id).get(
-                    TagType.ITEM, {}
-                )
-            )
+        return self.storage_model.get_player_tags(user_id=user_id).get_inventory(
+            TagType.ITEM
         )
 
     def get_adventure_info(self, user_id: int) -> Adventure | None:

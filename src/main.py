@@ -8,6 +8,7 @@ from game.adventure import AdventureReport
 from game.game import Game
 from game.items import ITEMS
 from game.zones import ZONES, Zone
+from game.tags import TagType
 
 guild_id = 1229078590713364602
 
@@ -158,10 +159,7 @@ async def inventory(interaction: discord.Interaction):
 
     items = game.get_player_items(user.id)
     item_list = "\n".join(
-        [
-            f"    {quantity}x {ITEMS[item].name}"
-            for item, quantity in items.items.items()
-        ]
+        [f"    {quantity}x {ITEMS[item].name}" for item, quantity in items.tags.items()]
     )
     response_string = f"Inventory: \n{item_list}"
     await interaction.response.send_message(response_string, ephemeral=True)
@@ -177,7 +175,7 @@ async def give(interaction: discord.Interaction, item_id: str, quantity: int):
     user = interaction.user
 
     with game.storage_model as t:
-        t.add_remove_item(user.id, item_id, quantity)
+        t.add_remove_tag(user.id, TagType.ITEM, item_id, quantity)
     await interaction.response.send_message(
         f"{user.display_name} is cheating! "
         + f"They gave themself {quantity} {ITEMS[item_id].name}"
