@@ -126,7 +126,6 @@ def process_quests(
 def process_adventure(
     player_items: Inventory,
     open_quest_ids: list[str],
-    zone_id: str,
     locked_quests: set[str],
     adventure: Adventure,
 ) -> AdventureReport:
@@ -134,6 +133,8 @@ def process_adventure(
     elapsed = current_time - adventure.last_updated
     num_ticks = int(elapsed / TICK_RATE)
     current_time = adventure.last_updated + num_ticks * TICK_RATE
+
+    zone_id = adventure.zone_id
 
     open_quests = [QUESTS[quest_id] for quest_id in open_quest_ids]
     finished_quests: list[str] = []

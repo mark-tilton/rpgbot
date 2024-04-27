@@ -1,8 +1,13 @@
 import sqlite3
 from collections.abc import Mapping
+from enum import Enum
 from sqlite3 import Cursor
 
 from game.adventure import Adventure
+
+
+class TagType(Enum):
+    ITEM = "item"
 
 
 class StorageTransaction:
@@ -37,63 +42,62 @@ class StorageTransaction:
             (last_updated, adventure_id),
         )
 
-    def add_remove_item(self, user_id: int, item_id: str, quantity: int) -> bool:
+    def add_remove_tag(
+        self, user_id: int, tag_type: TagType, tag: str, quantity: int
+    ) -> bool:
         if quantity == 0:
             return True
         result = self._cursor.execute(
             """
             SELECT quantity
-            FROM player_items
-            WHERE user_id = ? AND item_id = ?
+            FROM player_tags
+            WHERE user_id = ? AND type = ? AND tag = ?
             """,
-            (user_id, item_id),
+            (user_id, tag_type.value, tag),
         )
+
         current_quantity = result.fetchone()
         if current_quantity is None:
-            if quantity < 0:
+            if quantity <= 0:
                 return False
             self._cursor.execute(
-                """INSERT INTO player_items VALUES(?, ?, ?)""",
-                (user_id, item_id, quantity),
+                """INSERT INTO player_tags VALUES(?, ?, ?, ?)""",
+                (user_id, tag_type.value, tag, quantity),
             )
             return True
         new_quantity = current_quantity[0] + quantity
+
         if new_quantity < 0:
             return False
+
+        if new_quantity == 0:
+            result = self._cursor.execute(
+                """
+                DELETE FROM player_tags
+                WHERE user_id = ? AND type = ? AND tag = ?
+                """,
+                (user_id, tag_type.value, tag),
+            )
+            return True
+
         self._cursor.execute(
             """
-            UPDATE player_items
+            UPDATE player_tags
             SET quantity = ?
-            WHERE user_id = ? AND item_id = ?
+            WHERE user_id = ? AND type = ? AND tag = ?
             """,
             (
                 current_quantity[0] + quantity,
                 user_id,
-                item_id,
+                tag_type.value,
+                tag,
             ),
         )
         return True
 
-    def set_open_quests(self, user_id: int, quests: list[str]):
-        self._cursor.execute("DELETE FROM open_quests WHERE user_id = ?", (user_id,))
-        self._cursor.executemany(
-            "INSERT INTO open_quests VALUES(?, ?, ?)",
-            ((user_id, quest, i) for i, quest in enumerate(quests)),
-        )
-
-    def set_player_zone(self, user_id: int, zone_id: str, arrival_time: int):
-        self._cursor.execute(
-            "INSERT INTO player_zone VALUES(?, ?, ?)", (user_id, zone_id, arrival_time)
-        )
-
     def add_zone_access(self, user_id: int, zone_id: str):
         self._cursor.execute(
             "INSERT INTO player_zone_access VALUES(?, ?)", (user_id, zone_id)
-        )
-
-    def add_finished_quest(self, user_id: int, quest_id: str):
-        self._cursor.execute(
-            "INSERT INTO finished_quests VALUES(?, ?)", (user_id, quest_id)
         )
 
 
@@ -110,36 +114,17 @@ class StorageModel:
             )
             """)
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS player_zone(
+            CREATE TABLE IF NOT EXISTS player_tags(
                 user_id INT,
-                zone_id STR,
-                arrival_time INT
+                type STR,
+                tag STR,
+                quantity INT
             )
             """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS player_zone_access(
                 user_id INT,
                 zone_id STR
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS open_quests(
-                user_id INT,
-                quest_step_id STR,
-                order_idx INT
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS player_items(
-                user_id INT,
-                item_id STR,
-                quantity INT
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS finished_quests(
-                user_id INT,
-                quest_id STR
             )
             """)
 
@@ -161,41 +146,6 @@ class StorageModel:
             else:
                 self._connection.commit()
             self._transaction = None
-
-    def get_player_items(self, user_id: int) -> Mapping[str, int]:
-        cursor = self._connection.cursor()
-        result = cursor.execute(
-            """
-            SELECT
-                item_id,
-                quantity
-            FROM player_items
-            WHERE user_id = ?
-        """,
-            (user_id,),
-        )
-        items: Mapping[str, int] = {}
-        for item_id, quantity in result.fetchall():
-            if quantity <= 0:
-                continue
-            items[item_id] = quantity
-        return items
-
-    def get_item_quantity(self, user_id: int, item_id: str) -> int:
-        cursor = self._connection.cursor()
-        result = cursor.execute(
-            """
-            SELECT
-                quantity
-            FROM player_items
-            WHERE user_id = ? AND item_id = ?
-        """,
-            (user_id, item_id),
-        )
-        row = result.fetchone()
-        if row is None:
-            return 0
-        return row[0]
 
     def get_current_adventure(self, user_id: int) -> Adventure | None:
         cursor = self._connection.cursor()
@@ -219,24 +169,27 @@ class StorageModel:
             last_updated=last_updated,
         )
 
-    def get_player_zone(self, user_id: int) -> str | None:
+    def get_player_tags(self, user_id: int) -> Mapping[TagType, Mapping[str, int]]:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
             SELECT
-                zone_id,
-                arrival_time
-            FROM player_zone
+                tag,
+                quantity,
+                type
+            FROM player_tags
             WHERE user_id = ?
-            ORDER BY arrival_time DESC
-            """,
+        """,
             (user_id,),
         )
-        row = result.fetchone()
-        if row is None:
-            return None
-        zone_id, _ = row
-        return zone_id
+
+        tag_type_map: dict[TagType, dict[str, int]] = {}
+        for tag, quantity, tag_type in result.fetchall():
+            tag_quantity = tag_type_map.get(TagType(tag_type), {})
+            tag_quantity[tag] = quantity
+            tag_type_map[TagType(tag_type)] = tag_quantity
+
+        return tag_type_map
 
     def get_player_zone_access(self, user_id: int) -> list[str]:
         cursor = self._connection.cursor()
@@ -249,30 +202,3 @@ class StorageModel:
             (user_id,),
         )
         return [zone_id[0] for zone_id in result.fetchall()]
-
-    def get_open_quests(self, user_id: int) -> list[str]:
-        cursor = self._connection.cursor()
-        result = cursor.execute(
-            """
-            SELECT
-                quest_step_id,
-                order_idx
-            FROM open_quests
-            WHERE user_id = ?
-            ORDER BY order_idx ASC
-            """,
-            (user_id,),
-        )
-        return [step_id for step_id, _ in result.fetchall()]
-
-    def get_finished_quests(self, user_id: int) -> list[str]:
-        cursor = self._connection.cursor()
-        result = cursor.execute(
-            """
-            SELECT quest_id
-            FROM finished_quests
-            WHERE user_id = ?
-            """,
-            (user_id,),
-        )
-        return [quest_id[0] for quest_id in result.fetchall()]

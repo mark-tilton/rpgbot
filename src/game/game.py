@@ -1,7 +1,7 @@
 import time
 from math import floor
 
-from storage.storagemodel import StorageModel
+from storage.storagemodel import StorageModel, TagType
 
 from .adventure import Adventure, AdventureReport, process_adventure
 from .items import Inventory
@@ -22,25 +22,20 @@ class Game:
                 # Offset end / start times for adventures to avoid overlap
                 start_time = report.end_time + 1
             t.start_adventure(user_id, zone_id, start_time)
-            t.set_player_zone(user_id, zone_id, start_time)
         return report
 
     def update_adventure(
         self, user_id: int, adventure: Adventure | None = None
     ) -> AdventureReport | None:
         player_items = self.get_player_items(user_id)
-        open_quests = self.get_open_quests(user_id)
-        zone_id = self.get_player_zone(user_id)
         if adventure is None:
             adventure = self.get_adventure_info(user_id)
-        if adventure is None or zone_id is None:
+        if adventure is None:
             return None
-        finished_quests = self.get_finished_quests(user_id)
         report = process_adventure(
             player_items=player_items,
-            open_quest_ids=open_quests,
-            zone_id=zone_id,
-            locked_quests=finished_quests,
+            open_quest_ids=[],
+            locked_quests=set(),
             adventure=adventure,
         )
         with self.storage_model as t:
@@ -48,38 +43,28 @@ class Game:
             for adventure_group in report.adventure_groups:
                 for adventure_step in adventure_group.steps:
                     for item_id, quantity in adventure_step.items_gained.items.items():
-                        t.add_remove_item(user_id, item_id, quantity)
+                        t.add_remove_tag(user_id, TagType.ITEM, item_id, quantity)
                     for item_id, quantity in adventure_step.items_lost.items.items():
-                        t.add_remove_item(user_id, item_id, -quantity)
+                        t.add_remove_tag(user_id, TagType.ITEM, item_id, -quantity)
                     for zone_id in adventure_step.zones_discovered:
                         t.add_zone_access(user_id, zone_id)
-            for finished_quest in report.finished_quests:
-                t.add_finished_quest(user_id, finished_quest)
-            t.set_open_quests(user_id, report.open_quests)
         return report
 
     def add_zone_access(self, user_id: int, zone_id: str):
         with self.storage_model as t:
             t.add_zone_access(user_id, zone_id)
 
-    def add_finished_quests(self, user_id: int, quest_id: str):
-        with self.storage_model as t:
-            t.add_finished_quest(user_id, quest_id)
-
     def get_player_items(self, user_id: int) -> Inventory:
-        return Inventory(dict(self.storage_model.get_player_items(user_id=user_id)))
-
-    def get_open_quests(self, user_id: int) -> list[str]:
-        return self.storage_model.get_open_quests(user_id)
-
-    def get_player_zone(self, user_id: int) -> str | None:
-        return self.storage_model.get_player_zone(user_id)
+        return Inventory(
+            dict(
+                self.storage_model.get_player_tags(user_id=user_id).get(
+                    TagType.ITEM, {}
+                )
+            )
+        )
 
     def get_adventure_info(self, user_id: int) -> Adventure | None:
         return self.storage_model.get_current_adventure(user_id)
 
     def get_player_zone_access(self, user_id: int) -> set[str]:
         return set(self.storage_model.get_player_zone_access(user_id))
-
-    def get_finished_quests(self, user_id: int) -> set[str]:
-        return set(self.storage_model.get_finished_quests(user_id))
