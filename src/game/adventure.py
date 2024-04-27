@@ -16,7 +16,9 @@ class AdventureStep:
     zones_discovered: list[str] = field(default_factory=list)
 
     def display(self) -> str:
-        display_lines = [f"> - {self.quest.prompt}  "]
+        display_lines = []
+        for prompt in self.quest.prompts:
+            display_lines = [f"> - {prompt}  "]
         inventories: list[tuple[str, Inventory]] = [
             ("+", self.items_gained),
             ("-", self.items_lost),

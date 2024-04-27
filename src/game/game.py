@@ -3,8 +3,8 @@ from math import floor
 
 from storage.storagemodel import StorageModel
 
-from game.adventure import Adventure, AdventureReport, process_adventure
-from game.items import Inventory
+from .adventure import Adventure, AdventureReport, process_adventure
+from .items import Inventory
 
 
 class Game:

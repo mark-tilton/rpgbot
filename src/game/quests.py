@@ -2,6 +2,7 @@ import os
 import random
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import yaml
 
@@ -41,7 +42,7 @@ class QuestNextStep:
 class Quest:
     quest_id: str
     zone_id: str
-    prompt: str
+    prompts: list[str]
     frequency: float | None
     repeatable: bool
     merge: bool
@@ -96,38 +97,40 @@ class Quest:
 def load_quests() -> Mapping[str, Quest]:
     zone_dir = "data/zones"
     files = os.listdir(zone_dir)
-    quest_files = []
+    quest_files: list[list[dict[str, Any]]] = []
     for file in files:
         with open(f"{zone_dir}/{file}", mode="r") as f:
             quest_files.append(yaml.safe_load(f))
 
     quest_list_yaml = [quest for file in quest_files for quest in file]
-    print(quest_list_yaml)
 
     quests: dict[str, Quest] = {}
     for quest_yaml in quest_list_yaml:
         quest_id: str = quest_yaml["quest"]
         zone: str = quest_yaml["zone"]
-        prompt: str = quest_yaml["prompt"]
         frequency: float = quest_yaml.get("frequency", None)
         repeatable: bool = quest_yaml.get("repeatable", True)
         merge: bool = quest_yaml.get("merge", False)
         hold_open: bool = quest_yaml.get("hold_open", False)
 
+        prompts: str | list[str] = quest_yaml.get("prompt", [])
+        if isinstance(prompts, str):
+            prompts = [prompts]
+
         requirements: list[QuestItemRequirement] = []
         for quest_requirement_yaml in quest_yaml.get("reqs", []):
-            item_id: str = quest_requirement_yaml["item"]
-            if item_id not in ITEMS:
-                raise Exception(f"Invalid item_id found: {item_id}")
+            req_item_id: str = quest_requirement_yaml["item"]
+            if req_item_id not in ITEMS:
+                raise Exception(f"Invalid item_id found: {req_item_id}")
             req_quantity: int = quest_requirement_yaml.get("quantity", 1)
             consume: bool = quest_requirement_yaml.get("consume", False)
-            quest_requirement = QuestItemRequirement(item_id, req_quantity, consume)
+            quest_requirement = QuestItemRequirement(req_item_id, req_quantity, consume)
             requirements.append(quest_requirement)
 
         rewards: list[QuestReward] = []
         zone_unlocks: list[str] = []
         for quest_reward_yaml in quest_yaml.get("rewards", []):
-            item_id: str = quest_reward_yaml.get("item", None)
+            item_id: str | None = quest_reward_yaml.get("item", None)
             if item_id is None:
                 zone_id: str = quest_reward_yaml["zone"]
                 if zone_id not in ZONES:
@@ -153,7 +156,7 @@ def load_quests() -> Mapping[str, Quest]:
         quest = Quest(
             quest_id=quest_id,
             zone_id=zone,
-            prompt=prompt,
+            prompts=prompts,
             frequency=frequency,
             repeatable=repeatable,
             merge=merge,
