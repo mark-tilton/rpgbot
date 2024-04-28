@@ -157,9 +157,12 @@ async def inventory(interaction: discord.Interaction):
 
     report = game.update_adventure(user.id)
 
-    items = game.get_player_items(user.id)
+    items = game.get_player_tags(user.id).get_inventory(TagType.ITEM)
     item_list = "\n".join(
-        [f"    {quantity}x {ITEMS[item].name}" for item, quantity in items.tags.items()]
+        [
+            f"    {quantity}x {ITEMS[item].name}"
+            for item, quantity in items._tags.items()
+        ]
     )
     response_string = f"Inventory: \n{item_list}"
     await interaction.response.send_message(response_string, ephemeral=True)

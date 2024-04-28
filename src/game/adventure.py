@@ -5,15 +5,15 @@ from dataclasses import dataclass, field
 
 from .items import ITEMS
 from .quests import QUESTS, ROOT_QUESTS, Quest
-from .tags import Inventory
+from .tags import Inventory, TagCollection, TagType
 from .zones import ZONES
 
 
 @dataclass
 class AdventureStep:
     quest: Quest
-    items_gained: Inventory = field(default_factory=Inventory)
-    items_lost: Inventory = field(default_factory=Inventory)
+    tags_gained: TagCollection = field(default_factory=TagCollection)
+    tags_lost: TagCollection = field(default_factory=TagCollection)
     zones_discovered: list[str] = field(default_factory=list)
 
     def display(self) -> str:
@@ -21,11 +21,11 @@ class AdventureStep:
         for prompt in self.quest.prompts:
             display_lines = [f"> - {prompt}  "]
         inventories: list[tuple[str, Inventory]] = [
-            ("+", self.items_gained),
-            ("-", self.items_lost),
+            ("+", self.tags_gained.get_inventory(TagType.ITEM)),
+            ("-", self.tags_lost.get_inventory(TagType.ITEM)),
         ]
         for sign, inventory in inventories:
-            for item_id, quantity in inventory.tags.items():
+            for item_id, quantity in inventory._tags.items():
                 item = ITEMS[item_id]
                 item_name = item.name if quantity == 1 else item.plural
                 item_name = item_name.title()
@@ -68,10 +68,8 @@ class AdventureReport:
             first_step = steps[0]
             merged_step = AdventureStep(first_step.quest)
             for step in steps:
-                for item, quantity in step.items_gained.tags.items():
-                    merged_step.items_gained.add_tag(item, quantity)
-                for item, quantity in step.items_lost.tags.items():
-                    merged_step.items_lost.add_tag(item, quantity)
+                merged_step.tags_gained.add_tag_collection(step.tags_gained)
+                merged_step.tags_lost.add_tag_collection(step.tags_lost)
             display_lines.append(merged_step.display())
 
         return "\n".join(display_lines)
@@ -97,25 +95,25 @@ TICK_RATE = 5  # One tick every 5 seconds
 
 
 def process_quests(
-    quests: list[Quest], player_items: Inventory, zone_id: str
+    quests: list[Quest], player_tags: TagCollection, zone_id: str
 ) -> tuple[list[AdventureStep], list[Quest]]:
     adventure_steps: list[AdventureStep] = []
     open_quests: list[Quest] = []
     while len(quests) > 0:
         new_quest = quests.pop()
         completed_quest = new_quest.complete_quest()
-        player_items.add_inventory(completed_quest.items_gained)
+        player_tags.add_tag_collection(completed_quest.tags_gained)
         # We can assume this remove will succeed because we already checked requirements
-        player_items.remove_inventory(completed_quest.items_lost)
+        player_tags.remove_tag_collection(completed_quest.tags_lost)
         adventure_steps.append(
             AdventureStep(
                 quest=new_quest,
-                items_gained=completed_quest.items_gained,
-                items_lost=completed_quest.items_lost,
+                tags_gained=completed_quest.tags_gained,
+                tags_lost=completed_quest.tags_lost,
                 zones_discovered=completed_quest.zones_discovered,
             )
         )
-        next_step = new_quest.choose_next_step(player_items, zone_id)
+        next_step = new_quest.choose_next_step(player_tags, zone_id)
         if next_step is None:
             if new_quest.hold_open:
                 open_quests.append(new_quest)
@@ -125,7 +123,7 @@ def process_quests(
 
 
 def process_adventure(
-    player_items: Inventory,
+    player_tags: TagCollection,
     open_quest_ids: list[str],
     locked_quests: set[str],
     adventure: Adventure,
@@ -145,7 +143,7 @@ def process_adventure(
         available_quests: list[Quest] = []
         removed_open_quests: list[int] = []
         for i, open_quest in enumerate(reversed(open_quests)):
-            next_quest = open_quest.choose_next_step(player_items, zone_id)
+            next_quest = open_quest.choose_next_step(player_tags, zone_id)
             if next_quest is None:
                 continue
             removed_open_quests.append(len(open_quests) - i - 1)
@@ -154,7 +152,7 @@ def process_adventure(
             open_quests.pop(i)
 
         new_adventure_steps, new_open_quests = process_quests(
-            available_quests, player_items, zone_id
+            available_quests, player_tags, zone_id
         )
         open_quests.extend(new_open_quests)
         if len(new_adventure_steps) > 0:
@@ -165,7 +163,7 @@ def process_adventure(
         for root_quest, frequency in ROOT_QUESTS:
             if root_quest.quest_id in locked_quests:
                 continue
-            if not root_quest.check_quest_requirements(player_items, zone_id):
+            if not root_quest.check_quest_requirements(player_tags, zone_id):
                 continue
             frequency_seconds = frequency * 60
             frequency_ticks = frequency_seconds / TICK_RATE
@@ -177,7 +175,7 @@ def process_adventure(
                     locked_quests.add(root_quest.quest_id)
 
         new_adventure_steps, new_open_quests = process_quests(
-            new_quests, player_items, zone_id
+            new_quests, player_tags, zone_id
         )
         open_quests.extend(new_open_quests)
         if len(new_adventure_steps) > 0:

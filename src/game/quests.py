@@ -6,21 +6,23 @@ from typing import Any
 
 import yaml
 
-from .tags import Inventory
+from .tags import TagCollection, TagType
 from .items import ITEMS
 from .zones import ZONES
 
 
 @dataclass(frozen=True)
-class QuestItemRequirement:
-    item_id: str
+class QuestRequirement:
+    tag_type: TagType
+    tag: str
     quantity: int
     consume: bool
 
 
 @dataclass(frozen=True)
 class QuestReward:
-    item_id: str
+    tag_type: TagType
+    tag: str
     quantity: tuple[int, int]
     chance: float
 
@@ -28,8 +30,8 @@ class QuestReward:
 @dataclass(frozen=True)
 class CompletedQuest:
     quest_id: str
-    items_gained: Inventory
-    items_lost: Inventory
+    tags_gained: TagCollection
+    tags_lost: TagCollection
     zones_discovered: list[str]
 
 
@@ -48,45 +50,49 @@ class Quest:
     repeatable: bool
     merge: bool
     hold_open: bool
-    requirements: list[QuestItemRequirement]
+    requirements: list[QuestRequirement]
     rewards: list[QuestReward]
     zone_unlocks: list[str]
     next_steps: list[QuestNextStep]
 
     def complete_quest(self) -> CompletedQuest:
-        items_gained = Inventory()
+        tags_gained = TagCollection()
         for quest_reward in self.rewards:
             if random.random() * 100 >= quest_reward.chance:
                 continue
             quantity = random.randint(*quest_reward.quantity)
-            items_gained.add_tag(quest_reward.item_id, quantity)
-        items_lost = Inventory()
+            tags_gained.add_tag(quest_reward.tag_type, quest_reward.tag, quantity)
+        tags_lost = TagCollection()
         for req in self.requirements:
             if not req.consume:
                 continue
-            items_lost.add_tag(req.item_id, req.quantity)
+            tags_lost.add_tag(req.tag_type, req.tag, req.quantity)
         return CompletedQuest(
             quest_id=self.quest_id,
-            items_gained=items_gained,
-            items_lost=items_lost,
+            tags_gained=tags_gained,
+            tags_lost=tags_lost,
             zones_discovered=self.zone_unlocks,
         )
 
-    def check_quest_requirements(self, player_items: Inventory, zone_id: str) -> bool:
+    def check_quest_requirements(
+        self, player_tags: TagCollection, zone_id: str
+    ) -> bool:
         if zone_id != self.zone_id:
             return False
-        for item_req in self.requirements:
-            player_quantity = player_items.tags.get(item_req.item_id, 0)
-            if item_req.quantity == 0 and player_quantity > 0:
+        for tag_req in self.requirements:
+            player_quantity = player_tags.get_quantity(tag_req.tag_type, tag_req.tag)
+            if tag_req.quantity == 0 and player_quantity > 0:
                 return False
-            if player_quantity < item_req.quantity:
+            if player_quantity < tag_req.quantity:
                 return False
         return True
 
-    def choose_next_step(self, player_items: Inventory, zone_id: str) -> "Quest | None":
+    def choose_next_step(
+        self, player_tags: TagCollection, zone_id: str
+    ) -> "Quest | None":
         for step in self.next_steps:
             quest = QUESTS[step.quest_id]
-            if not quest.check_quest_requirements(player_items, zone_id):
+            if not quest.check_quest_requirements(player_tags, zone_id):
                 continue
             if random.random() * 100 < step.chance:
                 return quest
@@ -95,6 +101,17 @@ class Quest:
 
 # TODO Add quest file validation to check for
 # duplicated ids, extra fields, etc...
+def parse_tag(yaml_dict: dict[str, Any]) -> tuple[TagType, str]:
+    for tag_type in TagType:
+        tag = yaml_dict.get(tag_type.value)
+        if tag is None:
+            continue
+        if tag_type == TagType.ITEM and tag not in ITEMS:
+            raise Exception(f"Invalid item_id found: {tag}")
+        return tag_type, tag
+    raise Exception("Failed to parse tag type from quest yaml")
+
+
 def load_quests() -> Mapping[str, Quest]:
     zone_dir = "data/zones"
     files = os.listdir(zone_dir)
@@ -118,33 +135,34 @@ def load_quests() -> Mapping[str, Quest]:
         if isinstance(prompts, str):
             prompts = [prompts]
 
-        requirements: list[QuestItemRequirement] = []
+        requirements: list[QuestRequirement] = []
         for quest_requirement_yaml in quest_yaml.get("reqs", []):
-            req_item_id: str = quest_requirement_yaml["item"]
-            if req_item_id not in ITEMS:
-                raise Exception(f"Invalid item_id found: {req_item_id}")
+            req_tag_type, req_tag = parse_tag(quest_requirement_yaml)
             req_quantity: int = quest_requirement_yaml.get("quantity", 1)
             consume: bool = quest_requirement_yaml.get("consume", False)
-            quest_requirement = QuestItemRequirement(req_item_id, req_quantity, consume)
+            quest_requirement = QuestRequirement(
+                req_tag_type, req_tag, req_quantity, consume
+            )
             requirements.append(quest_requirement)
 
         rewards: list[QuestReward] = []
         zone_unlocks: list[str] = []
         for quest_reward_yaml in quest_yaml.get("rewards", []):
-            item_id: str | None = quest_reward_yaml.get("item", None)
-            if item_id is None:
-                zone_id: str = quest_reward_yaml["zone"]
+            # Attempt to grab zone reward
+            zone_id: str | None = quest_reward_yaml.get("zone")
+            if zone_id is not None:
+                zone_unlocks.append(zone_id)
                 if zone_id not in ZONES:
                     raise Exception(f"Invalid zone_id found: {zone_id}")
-                zone_unlocks.append(zone_id)
                 continue
-            if item_id not in ITEMS:
-                raise Exception(f"Invalid item_id found: {item_id}")
+
+            # Grab tag rewards
+            rew_tag_type, rew_tag = parse_tag(quest_reward_yaml)
             quantity: int | tuple[int, int] = quest_reward_yaml.get("quantity", 1)
             if isinstance(quantity, int):
                 quantity = (quantity, quantity)
             chance: float = quest_reward_yaml.get("chance", 100)
-            quest_reward = QuestReward(item_id, quantity, chance)
+            quest_reward = QuestReward(rew_tag_type, rew_tag, quantity, chance)
             rewards.append(quest_reward)
 
         next_steps: list[QuestNextStep] = []

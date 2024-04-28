@@ -1,10 +1,10 @@
 import time
 from math import floor
 
-from storage.storagemodel import StorageModel, TagType
+from storage.storagemodel import StorageModel
 
 from .adventure import Adventure, AdventureReport, process_adventure
-from .tags import Inventory
+from .tags import TagCollection
 
 
 class Game:
@@ -27,13 +27,13 @@ class Game:
     def update_adventure(
         self, user_id: int, adventure: Adventure | None = None
     ) -> AdventureReport | None:
-        player_items = self.get_player_items(user_id)
+        player_tags = self.get_player_tags(user_id)
         if adventure is None:
             adventure = self.get_adventure_info(user_id)
         if adventure is None:
             return None
         report = process_adventure(
-            player_items=player_items,
+            player_tags=player_tags,
             open_quest_ids=[],
             locked_quests=set(),
             adventure=adventure,
@@ -42,10 +42,18 @@ class Game:
             t.update_adventure(adventure.adventure_id, report.end_time)
             for adventure_group in report.adventure_groups:
                 for adventure_step in adventure_group.steps:
-                    for item_id, quantity in adventure_step.items_gained.tags.items():
-                        t.add_remove_tag(user_id, TagType.ITEM, item_id, quantity)
-                    for item_id, quantity in adventure_step.items_lost.tags.items():
-                        t.add_remove_tag(user_id, TagType.ITEM, item_id, -quantity)
+                    for (
+                        tag_type,
+                        tag,
+                        quantity,
+                    ) in adventure_step.tags_gained.get_all_tags():
+                        t.add_remove_tag(user_id, tag_type, tag, quantity)
+                    for (
+                        tag_type,
+                        tag,
+                        quantity,
+                    ) in adventure_step.tags_lost.get_all_tags():
+                        t.add_remove_tag(user_id, tag_type, tag, -quantity)
                     for zone_id in adventure_step.zones_discovered:
                         t.add_zone_access(user_id, zone_id)
         return report
@@ -54,10 +62,8 @@ class Game:
         with self.storage_model as t:
             t.add_zone_access(user_id, zone_id)
 
-    def get_player_items(self, user_id: int) -> Inventory:
-        return self.storage_model.get_player_tags(user_id=user_id).get_inventory(
-            TagType.ITEM
-        )
+    def get_player_tags(self, user_id: int) -> TagCollection:
+        return self.storage_model.get_player_tags(user_id=user_id)
 
     def get_adventure_info(self, user_id: int) -> Adventure | None:
         return self.storage_model.get_current_adventure(user_id)

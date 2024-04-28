@@ -38,8 +38,8 @@
   rewards:
     - item: gold
       quantity: [5, 20]
-    - item: shovel
-      chance: 10
+    # - item: shovel
+    #   chance: 10
 
 - quest: find_bear_in_cave
   zone: forest
@@ -82,24 +82,27 @@
 - quest: start_forest_treasure_map
   zone: forest
   prompt: You look at the treasure map in your bag.
-  frequency: 60
+  frequency: 5
   reqs:
     - item: forest_treasure_map
-    - item: shovel
-      quantity: 0
+      consume: Yes
   next:
+    - quest: follow_forest_treasure_map_with_shovel
     - quest: follow_forest_treasure_map_no_shovel
 
 - quest: follow_forest_treasure_map_no_shovel
   zone: forest
   prompt: You find the spot the map was pointing to but without a shovel you can't continue.
+  rewards:
+    - tag: forest_treasure_needs_shovel
 
-- quest: start_forest_treasure_map_with_shovel
+- quest: forest_treasure_map_found_shovel
   zone: forest
-  prompt: You look at the treasure map in your bag.
+  prompt: Now that you have a shovel you return to the spot on the treasure map from earlier.
   frequency: 5
   reqs:
-    - item: forest_treasure_map
+    - tag: forest_treasure_needs_shovel
+      consume: Yes
     - item: shovel
   next:
     - quest: follow_forest_treasure_map_with_shovel
@@ -108,8 +111,6 @@
   zone: forest
   prompt: You use your shovel to dig at the spot and find some treasure!
   reqs:
-    - item: forest_treasure_map
-      consume: Yes
     - item: shovel
   rewards:
     - item: gold
@@ -130,7 +131,9 @@
   zone: forest
   prompt: You follow a road east into a clearing.
   frequency: 60
-  repeatable: No
+  reqs:
+    - tag: discovered_farmlands
+      quantity: 0
   next:
     - quest: discover_mortia_farmlands
 
@@ -139,3 +142,4 @@
   prompt: Beyond the clearing you see vast farmlands surrounding a large city.
   rewards:
     - zone: mortia_farmland
+    - tag: discovered_farmlands
