@@ -90,11 +90,6 @@ class StorageTransaction:
         )
         return True
 
-    def add_zone_access(self, user_id: int, zone_id: str):
-        self._cursor.execute(
-            "INSERT INTO player_zone_access VALUES(?, ?)", (user_id, zone_id)
-        )
-
 
 class StorageModel:
     def __init__(self):
@@ -114,12 +109,6 @@ class StorageModel:
                 type STR,
                 tag STR,
                 quantity INT
-            )
-            """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS player_zone_access(
-                user_id INT,
-                zone_id STR
             )
             """)
 
@@ -183,15 +172,3 @@ class StorageModel:
             tag_type = TagType(type)
             tag_collection.add_tag(tag_type, tag, quantity)
         return tag_collection
-
-    def get_player_zone_access(self, user_id: int) -> list[str]:
-        cursor = self._connection.cursor()
-        result = cursor.execute(
-            """
-            SELECT zone_id
-            FROM player_zone_access
-            WHERE user_id = ?
-            """,
-            (user_id,),
-        )
-        return [zone_id[0] for zone_id in result.fetchall()]

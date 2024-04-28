@@ -41,13 +41,13 @@ async def on_ready():
             found_zones.add(zone.zone_id)
 
     # Clear out all channels
-    # for zone_id in found_zones:
-    #     channel_id = zone_to_channel[zone_id]
-    #     channel = guild.get_channel(channel_id)
-    #     if channel is None or not isinstance(channel, discord.TextChannel):
-    #         continue
-    #     await channel.delete()
-    # found_zones.clear()
+    for zone_id in found_zones:
+        channel_id = zone_to_channel[zone_id]
+        channel = guild.get_channel(channel_id)
+        if channel is None or not isinstance(channel, discord.TextChannel):
+            continue
+        await channel.delete()
+    found_zones.clear()
 
     # Add new zones to the server
     self_overwrite = discord.PermissionOverwrite()
@@ -86,7 +86,7 @@ async def handle_adventure_report(
         return
     for adventure_group in report.adventure_groups:
         for adventure_step in adventure_group.steps:
-            for zone_id in adventure_step.zones_discovered:
+            for zone_id in adventure_step.get_discovered_zones():
                 channel_id = zone_to_channel[zone_id]
                 channel = guild.get_channel(channel_id)
                 if not isinstance(channel, discord.TextChannel):

@@ -132,7 +132,7 @@
   prompt: You follow a road east into a clearing.
   frequency: 60
   reqs:
-    - tag: discovered_farmlands
+    - zone: mortia_farmland
       quantity: 0
   next:
     - quest: discover_mortia_farmlands
@@ -142,4 +142,3 @@
   prompt: Beyond the clearing you see vast farmlands surrounding a large city.
   rewards:
     - zone: mortia_farmland
-    - tag: discovered_farmlands

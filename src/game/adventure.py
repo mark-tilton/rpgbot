@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from .items import ITEMS
-from .quests import QUESTS, ROOT_QUESTS, Quest
+from .quests import ROOT_QUESTS, Quest
 from .tags import Inventory, TagCollection, TagType
 from .zones import ZONES
 
@@ -14,7 +14,15 @@ class AdventureStep:
     quest: Quest
     tags_gained: TagCollection = field(default_factory=TagCollection)
     tags_lost: TagCollection = field(default_factory=TagCollection)
-    zones_discovered: list[str] = field(default_factory=list)
+
+    def get_discovered_zones(self) -> list[str]:
+        return [
+            zone_id
+            for zone_id, quantity in self.tags_gained.get_inventory(
+                TagType.ZONE
+            ).get_all_tags()
+            if quantity >= 1
+        ]
 
     def display(self) -> str:
         display_lines = []
@@ -30,7 +38,7 @@ class AdventureStep:
                 item_name = item.name if quantity == 1 else item.plural
                 item_name = item_name.title()
                 display_lines.append(f">     {sign}{quantity} {item_name}  ")
-        for zone_id in self.zones_discovered:
+        for zone_id in self.get_discovered_zones():
             zone = ZONES[zone_id]
             display_lines.append(f">     Discovered zone: {zone.name.title()}  ")
         return "\n".join(display_lines)
@@ -46,8 +54,6 @@ class AdventureReport:
     start_time: int
     end_time: int
     adventure_groups: list[AdventureGroup]
-    open_quests: list[str]
-    finished_quests: list[str]
 
     def display(self) -> str:
         merged_steps: Mapping[str, list[AdventureStep]] = {}
@@ -94,38 +100,8 @@ class Adventure:
 TICK_RATE = 5  # One tick every 5 seconds
 
 
-def process_quests(
-    quests: list[Quest], player_tags: TagCollection, zone_id: str
-) -> tuple[list[AdventureStep], list[Quest]]:
-    adventure_steps: list[AdventureStep] = []
-    open_quests: list[Quest] = []
-    while len(quests) > 0:
-        new_quest = quests.pop()
-        completed_quest = new_quest.complete_quest()
-        player_tags.add_tag_collection(completed_quest.tags_gained)
-        # We can assume this remove will succeed because we already checked requirements
-        player_tags.remove_tag_collection(completed_quest.tags_lost)
-        adventure_steps.append(
-            AdventureStep(
-                quest=new_quest,
-                tags_gained=completed_quest.tags_gained,
-                tags_lost=completed_quest.tags_lost,
-                zones_discovered=completed_quest.zones_discovered,
-            )
-        )
-        next_step = new_quest.choose_next_step(player_tags, zone_id)
-        if next_step is None:
-            if new_quest.hold_open:
-                open_quests.append(new_quest)
-            continue
-        quests.append(next_step)
-    return adventure_steps, open_quests
-
-
 def process_adventure(
     player_tags: TagCollection,
-    open_quest_ids: list[str],
-    locked_quests: set[str],
     adventure: Adventure,
 ) -> AdventureReport:
     current_time = int(time.time())
@@ -135,34 +111,11 @@ def process_adventure(
 
     zone_id = adventure.zone_id
 
-    open_quests = [QUESTS[quest_id] for quest_id in open_quest_ids]
-    finished_quests: list[str] = []
-
     adventure_groups: list[AdventureGroup] = []
     for _ in range(7200):
-        available_quests: list[Quest] = []
-        removed_open_quests: list[int] = []
-        for i, open_quest in enumerate(reversed(open_quests)):
-            next_quest = open_quest.choose_next_step(player_tags, zone_id)
-            if next_quest is None:
-                continue
-            removed_open_quests.append(len(open_quests) - i - 1)
-            available_quests.append(next_quest)
-        for i in removed_open_quests:
-            open_quests.pop(i)
-
-        new_adventure_steps, new_open_quests = process_quests(
-            available_quests, player_tags, zone_id
-        )
-        open_quests.extend(new_open_quests)
-        if len(new_adventure_steps) > 0:
-            adventure_groups.append(AdventureGroup(new_adventure_steps))
-
         # Try to start a new quest
         new_quests: list[Quest] = []
         for root_quest, frequency in ROOT_QUESTS:
-            if root_quest.quest_id in locked_quests:
-                continue
             if not root_quest.check_quest_requirements(player_tags, zone_id):
                 continue
             frequency_seconds = frequency * 60
@@ -170,21 +123,31 @@ def process_adventure(
             threshold = 1 / frequency_ticks if frequency_ticks > 0 else 1
             if random.random() < threshold:
                 new_quests.append(root_quest)
-                if not root_quest.repeatable:
-                    finished_quests.append(root_quest.quest_id)
-                    locked_quests.add(root_quest.quest_id)
 
-        new_adventure_steps, new_open_quests = process_quests(
-            new_quests, player_tags, zone_id
-        )
-        open_quests.extend(new_open_quests)
-        if len(new_adventure_steps) > 0:
-            adventure_groups.append(AdventureGroup(new_adventure_steps))
+        adventure_steps: list[AdventureStep] = []
+        while len(new_quests) > 0:
+            new_quest = new_quests.pop()
+            completed_quest = new_quest.complete_quest()
+            player_tags.add_tag_collection(completed_quest.tags_gained)
+            # We can assume this remove will succeed because we already checked requirements
+            player_tags.remove_tag_collection(completed_quest.tags_lost)
+            adventure_steps.append(
+                AdventureStep(
+                    quest=new_quest,
+                    tags_gained=completed_quest.tags_gained,
+                    tags_lost=completed_quest.tags_lost,
+                )
+            )
+            next_step = new_quest.choose_next_step(player_tags, zone_id)
+            if next_step is None:
+                continue
+            new_quests.append(next_step)
+
+        if len(adventure_steps) > 0:
+            adventure_groups.append(AdventureGroup(adventure_steps))
 
     return AdventureReport(
         adventure.last_updated,
         current_time,
         adventure_groups,
-        [quest.quest_id for quest in open_quests],
-        finished_quests,
     )

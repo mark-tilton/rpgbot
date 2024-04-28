@@ -5,6 +5,7 @@ from enum import Enum
 class TagType(Enum):
     ITEM = "item"
     TAG = "tag"
+    ZONE = "zone"
 
 
 @dataclass

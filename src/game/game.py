@@ -34,8 +34,6 @@ class Game:
             return None
         report = process_adventure(
             player_tags=player_tags,
-            open_quest_ids=[],
-            locked_quests=set(),
             adventure=adventure,
         )
         with self.storage_model as t:
@@ -54,19 +52,10 @@ class Game:
                         quantity,
                     ) in adventure_step.tags_lost.get_all_tags():
                         t.add_remove_tag(user_id, tag_type, tag, -quantity)
-                    for zone_id in adventure_step.zones_discovered:
-                        t.add_zone_access(user_id, zone_id)
         return report
-
-    def add_zone_access(self, user_id: int, zone_id: str):
-        with self.storage_model as t:
-            t.add_zone_access(user_id, zone_id)
 
     def get_player_tags(self, user_id: int) -> TagCollection:
         return self.storage_model.get_player_tags(user_id=user_id)
 
     def get_adventure_info(self, user_id: int) -> Adventure | None:
         return self.storage_model.get_current_adventure(user_id)
-
-    def get_player_zone_access(self, user_id: int) -> set[str]:
-        return set(self.storage_model.get_player_zone_access(user_id))

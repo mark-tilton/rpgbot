@@ -32,7 +32,6 @@ class CompletedQuest:
     quest_id: str
     tags_gained: TagCollection
     tags_lost: TagCollection
-    zones_discovered: list[str]
 
 
 @dataclass(frozen=True)
@@ -47,12 +46,9 @@ class Quest:
     zone_id: str
     prompts: list[str]
     frequency: float | None
-    repeatable: bool
     merge: bool
-    hold_open: bool
     requirements: list[QuestRequirement]
     rewards: list[QuestReward]
-    zone_unlocks: list[str]
     next_steps: list[QuestNextStep]
 
     def complete_quest(self) -> CompletedQuest:
@@ -71,7 +67,6 @@ class Quest:
             quest_id=self.quest_id,
             tags_gained=tags_gained,
             tags_lost=tags_lost,
-            zones_discovered=self.zone_unlocks,
         )
 
     def check_quest_requirements(
@@ -108,6 +103,8 @@ def parse_tag(yaml_dict: dict[str, Any]) -> tuple[TagType, str]:
             continue
         if tag_type == TagType.ITEM and tag not in ITEMS:
             raise Exception(f"Invalid item_id found: {tag}")
+        if tag_type == TagType.ZONE and tag not in ZONES:
+            raise Exception(f"Invalid zone_id found: {tag}")
         return tag_type, tag
     raise Exception("Failed to parse tag type from quest yaml")
 
@@ -127,9 +124,7 @@ def load_quests() -> Mapping[str, Quest]:
         quest_id: str = quest_yaml["quest"]
         zone: str = quest_yaml["zone"]
         frequency: float = quest_yaml.get("frequency", None)
-        repeatable: bool = quest_yaml.get("repeatable", True)
         merge: bool = quest_yaml.get("merge", False)
-        hold_open: bool = quest_yaml.get("hold_open", False)
 
         prompts: str | list[str] = quest_yaml.get("prompt", [])
         if isinstance(prompts, str):
@@ -146,16 +141,7 @@ def load_quests() -> Mapping[str, Quest]:
             requirements.append(quest_requirement)
 
         rewards: list[QuestReward] = []
-        zone_unlocks: list[str] = []
         for quest_reward_yaml in quest_yaml.get("rewards", []):
-            # Attempt to grab zone reward
-            zone_id: str | None = quest_reward_yaml.get("zone")
-            if zone_id is not None:
-                zone_unlocks.append(zone_id)
-                if zone_id not in ZONES:
-                    raise Exception(f"Invalid zone_id found: {zone_id}")
-                continue
-
             # Grab tag rewards
             rew_tag_type, rew_tag = parse_tag(quest_reward_yaml)
             quantity: int | tuple[int, int] = quest_reward_yaml.get("quantity", 1)
@@ -177,12 +163,9 @@ def load_quests() -> Mapping[str, Quest]:
             zone_id=zone,
             prompts=prompts,
             frequency=frequency,
-            repeatable=repeatable,
             merge=merge,
-            hold_open=hold_open,
             requirements=requirements,
             rewards=rewards,
-            zone_unlocks=zone_unlocks,
             next_steps=next_steps,
         )
         if quest_id in quests:
