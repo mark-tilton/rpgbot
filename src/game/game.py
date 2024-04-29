@@ -11,7 +11,7 @@ class Game:
     def __init__(self):
         self.storage_model = StorageModel()
 
-    def start_adventure(self, user_id: int, zone_id: str) -> AdventureReport | None:
+    def start_adventure(self, user_id: int, zone_id: str, thread_id: int) -> AdventureReport | None:
         with self.storage_model as t:
             start_time = floor(time.time())
             current_adventure = self.storage_model.get_current_adventure(user_id)
@@ -21,7 +21,7 @@ class Game:
                 assert report is not None
                 # Offset end / start times for adventures to avoid overlap
                 start_time = report.end_time + 1
-            t.start_adventure(user_id, zone_id, start_time)
+            t.start_adventure(user_id, zone_id, start_time, thread_id)
         return report
 
     def update_adventure(

@@ -52,10 +52,20 @@ class AdventureGroup:
 
 
 @dataclass
+class Adventure:
+    adventure_id: int
+    user_id: int
+    zone_id: str
+    last_updated: int
+    thread_id: int
+
+
+@dataclass
 class AdventureReport:
     start_time: int
     end_time: int
     adventure_groups: list[AdventureGroup]
+    adventure: Adventure
 
     def display(self) -> str:
         merged_steps: Mapping[str, list[AdventureStep]] = {}
@@ -89,17 +99,9 @@ class QuestCompletion:
     next_step: int | None
 
 
-@dataclass
-class Adventure:
-    adventure_id: int
-    user_id: int
-    zone_id: str
-    last_updated: int
-
-
 # TODO Change all rates to be based on tick rate so
 # you can speed up / slow down the game.
-TICK_RATE = 5  # One tick every 5 seconds
+TICK_RATE = 1  # One tick every 1 second
 
 
 def process_adventure(
@@ -114,7 +116,7 @@ def process_adventure(
     zone_id = adventure.zone_id
 
     adventure_groups: list[AdventureGroup] = []
-    for _ in range(7200):
+    for _ in range(num_ticks):
         # Try to start a new quest
         new_quests: list[Quest] = []
         for root_quest, frequency in ROOT_QUESTS:
@@ -123,6 +125,10 @@ def process_adventure(
             frequency_seconds = frequency * 60
             frequency_ticks = frequency_seconds / TICK_RATE
             threshold = 1 / frequency_ticks if frequency_ticks > 0 else 1
+            int_threshold = int(threshold)
+            threshold -= int_threshold
+            for _ in range(int_threshold):
+                new_quests.append(root_quest)
             if random.random() < threshold:
                 new_quests.append(root_quest)
 
@@ -152,4 +158,5 @@ def process_adventure(
         adventure.last_updated,
         current_time,
         adventure_groups,
+        adventure,
     )

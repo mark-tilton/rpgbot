@@ -13,10 +13,10 @@ class StorageTransaction:
     def cancel(self):
         self._rollback = True
 
-    def start_adventure(self, user_id: int, zone_id: str, start_time: int) -> Adventure:
+    def start_adventure(self, user_id: int, zone_id: str, start_time: int, thread_id: int) -> Adventure:
         self._cursor.execute(
-            "INSERT INTO player_adventure VALUES(?, ?, ?, ?)",
-            (None, user_id, zone_id, start_time),
+            "INSERT INTO player_adventure VALUES(?, ?, ?, ?, ?)",
+            (None, user_id, zone_id, start_time, thread_id),
         )
         if not self._cursor.lastrowid:
             raise Exception("Lost rowid for new activity")
@@ -25,6 +25,7 @@ class StorageTransaction:
             user_id=user_id,
             zone_id=zone_id,
             last_updated=start_time,
+            thread_id=thread_id
         )
 
     def update_adventure(self, adventure_id: int, last_updated: int):
@@ -100,7 +101,8 @@ class StorageModel:
                 adventure_id INTEGER PRIMARY KEY ASC,
                 user_id INT,
                 zone_id STR,
-                last_updated INT
+                last_updated INT,
+                thread_id INT
             )
             """)
         cursor.execute("""
@@ -145,12 +147,13 @@ class StorageModel:
         row = result.fetchone()
         if row is None:
             return None
-        adventure_id, user_id, zone_id, last_updated = row
+        adventure_id, user_id, zone_id, last_updated, thread_id = row
         return Adventure(
             adventure_id=adventure_id,
             user_id=user_id,
             zone_id=zone_id,
             last_updated=last_updated,
+            thread_id=thread_id,
         )
 
     def get_player_tags(self, user_id: int) -> TagCollection:
