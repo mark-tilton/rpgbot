@@ -11,6 +11,11 @@
 - item: shovel
   category: tool
 
+- item: axe
+  category: tool
+
+- item: log
+
 - item: small_lockbox
   plural: small lockboxes
 
@@ -20,4 +25,7 @@
 
 - item: berry
   plural: berries
+  category: food
+
+- item: apple
   category: food

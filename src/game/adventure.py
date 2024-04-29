@@ -33,11 +33,13 @@ class AdventureStep:
             ("-", self.tags_lost.get_inventory(TagType.ITEM)),
         ]
         for sign, inventory in inventories:
-            for item_id, quantity in inventory._tags.items():
+            for item_id, quantity in inventory.get_all_tags():
                 item = ITEMS[item_id]
                 item_name = item.name if quantity == 1 else item.plural
                 item_name = item_name.title()
                 display_lines.append(f">     {sign}{quantity} {item_name}  ")
+        for skill_id, xp in self.tags_gained.get_inventory(TagType.XP).get_all_tags():
+            display_lines.append(f">     Gained {xp} {skill_id} xp")
         for zone_id in self.get_discovered_zones():
             zone = ZONES[zone_id]
             display_lines.append(f">     Discovered zone: {zone.name.title()}  ")

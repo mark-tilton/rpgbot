@@ -14,11 +14,41 @@
 - quest: forage_berries_forest
   zone: forest
   prompt: You find berries while foraging in the forest.
-  frequency: 3
+  frequency: 0.1
   merge: Yes
   rewards:
     - item: berry
       quantity: [1, 3]
+    - xp: harvesting
+      quantity: [0, 1]
+
+- quest: forage_fruit_forest
+  zone: forest
+  prompt:
+    - You happen to find an apple tree while foraging in the forest.
+    - You are able to pick some apples from the tree.
+  frequency: 0.5
+  merge: Yes
+  reqs:
+    - level: harvesting
+      quantity: 10
+  rewards:
+    - item: apple
+      quantity: [2, 5]
+    - xp: harvesting
+      quantity: 5
+
+- quest: chop_birch_tree
+  zone: forest
+  prompt: You chop some small trees with your axe.
+  frequency: 2
+  merge: Yes
+  reqs:
+    - item: axe
+  rewards:
+    - item: log
+    - xp: harvesting
+      quantity: 10
 
 # ====================
 # A cave in the forest

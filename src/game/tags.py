@@ -6,6 +6,8 @@ class TagType(Enum):
     ITEM = "item"
     TAG = "tag"
     ZONE = "zone"
+    XP = "xp"
+    LEVEL = "level"
 
 
 @dataclass

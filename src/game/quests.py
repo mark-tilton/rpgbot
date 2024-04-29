@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 
+from .skills import level_to_xp
 from .tags import TagCollection, TagType
 from .items import ITEMS
 from .zones import ZONES
@@ -134,6 +135,9 @@ def load_quests() -> Mapping[str, Quest]:
         for quest_requirement_yaml in quest_yaml.get("reqs", []):
             req_tag_type, req_tag = parse_tag(quest_requirement_yaml)
             req_quantity: int = quest_requirement_yaml.get("quantity", 1)
+            if req_tag_type == TagType.LEVEL:
+                req_tag_type = TagType.XP
+                req_quantity = level_to_xp(req_quantity)
             consume: bool = quest_requirement_yaml.get("consume", False)
             quest_requirement = QuestRequirement(
                 req_tag_type, req_tag, req_quantity, consume
@@ -144,6 +148,8 @@ def load_quests() -> Mapping[str, Quest]:
         for quest_reward_yaml in quest_yaml.get("rewards", []):
             # Grab tag rewards
             rew_tag_type, rew_tag = parse_tag(quest_reward_yaml)
+            if rew_tag_type == TagType.LEVEL:
+                raise Exception("Cannot reward skill experience in levels")
             quantity: int | tuple[int, int] = quest_reward_yaml.get("quantity", 1)
             if isinstance(quantity, int):
                 quantity = (quantity, quantity)
