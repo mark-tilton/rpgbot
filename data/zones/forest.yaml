@@ -27,7 +27,7 @@
   prompt:
     - You happen to find an apple tree while foraging in the forest.
     - You are able to pick some apples from the tree.
-  frequency: 0.5
+  frequency: 0.3
   merge: Yes
   reqs:
     - level: harvesting
@@ -41,7 +41,7 @@
 - quest: chop_birch_tree
   zone: forest
   prompt: You chop some small trees with your axe.
-  frequency: 2
+  frequency: 0.5
   merge: Yes
   reqs:
     - item: axe
@@ -56,7 +56,7 @@
 - quest: find_cave_forest
   zone: forest
   prompt: While walking in the forest you spot a small cave.
-  frequency: 60
+  frequency: 2
   next:
     - quest: find_camp_in_cave
       chance: 40
@@ -112,7 +112,7 @@
 - quest: start_forest_treasure_map
   zone: forest
   prompt: You look at the treasure map in your bag.
-  frequency: 5
+  frequency: 1
   reqs:
     - item: forest_treasure_map
       consume: Yes
@@ -129,7 +129,7 @@
 - quest: forest_treasure_map_found_shovel
   zone: forest
   prompt: Now that you have a shovel you return to the spot on the treasure map from earlier.
-  frequency: 5
+  frequency: 1
   reqs:
     - tag: forest_treasure_needs_shovel
       consume: Yes

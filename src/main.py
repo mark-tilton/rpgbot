@@ -113,29 +113,26 @@ async def send_adventure_report(
     thread = channel.get_thread(thread_id)
     if not thread:
         raise Exception(f"Thread not found: {thread_id}")
-    messages: list[list[str]] = []
-    report_lines = report.display().splitlines()
-    current_message = []
-    message_length = 0
-    for line in report_lines:
-        line_length = len(line) + 2
-        if line_length + message_length > 1000 and line == "":
-            messages.append(current_message)
-            current_message = ["_ _"]
-            message_length = line_length
+    adventure_id = report.adventure.adventure_id
+    for new_group in report.adventure_groups:
+        group = game.storage_model.get_adventure_results(adventure_id, new_group.group_id)
+        _, message_id = game.storage_model.get_group_info(adventure_id, new_group.group_id)
+        display_lines: list[str] = []
+        for step in group.steps:
+            display_lines.append(step.display())
+        full_message = "\n".join(display_lines)
+        if message_id is None:
+            message = await thread.send(full_message)
+            with game.storage_model as t:
+                t.add_group_message(adventure_id, new_group.group_id, message.id)
             continue
-        current_message.append(line)
-        message_length += line_length
-    messages.append(current_message)
-    for message in messages:
-        if len(message) == 0:
-            continue
-        await thread.send("\n".join(message))
-    # await thread.edit(archived=True)
+        message = thread.get_partial_message(message_id)
+        await message.edit(content=full_message)
 
 @tasks.loop(seconds=5)
 async def update_adventures():
     for user in client.get_all_members():
+        # Update the user's active adventure
         report = game.update_adventure(user.id)
         if report is not None:
             guild = client.get_guild(guild_id)
@@ -149,6 +146,19 @@ async def update_adventures():
                 print(f"Channel {channel_id} was invalid")
                 continue
             await handle_adventure_report(guild, channel, user, report)
+
+        # Check user channel permissions
+        # shown_overwrite = discord.PermissionOverwrite()
+        # shown_overwrite.view_channel = True
+        # player_tags = game.get_player_tags(user.id)
+        # player_zones = player_tags.get_inventory(TagType.ZONE)
+        # for zone_id, _ in player_zones.get_all_tags():
+        #     channel_id = zone_to_channel[zone_id]
+        #     channel = client.get_channel(channel_id)
+        #     if channel is None or not isinstance(channel, discord.TextChannel):
+        #         print(f"Failed to find channel: {channel_id}")
+        #         continue
+        #     await channel.set_permissions(user, overwrite=shown_overwrite)
 
 @tree.command(
     name="adventure",

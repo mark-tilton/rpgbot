@@ -1,8 +1,9 @@
 import sqlite3
 from sqlite3 import Cursor
 
-from game.adventure import Adventure
+from game.adventure import Adventure, AdventureGroup, AdventureStep
 from game.tags import TagType, TagCollection
+from game.quests import QUESTS
 
 
 class StorageTransaction:
@@ -91,6 +92,108 @@ class StorageTransaction:
         )
         return True
 
+    def increment_or_insert_quest_group(self, adventure_id: int, group_id: str):
+        result = self._cursor.execute(
+            """
+            SELECT count 
+            FROM quest_group_info 
+            WHERE adventure_id = ? AND group_id = ?
+            """, (adventure_id, group_id))
+        if result.fetchone() is None:
+            self._cursor.execute(
+                """
+                INSERT INTO quest_group_info
+                VALUES(?, ?, ?, ?)
+                """, (adventure_id, group_id, 1, None))
+            return
+        self._cursor.execute(
+            """
+            UPDATE quest_group_info
+            SET count = count + 1
+            WHERE adventure_id = ? AND group_id = ?
+            """, (adventure_id, group_id))
+
+    def add_group_message(self, adventure_id: int, group_id: str, message_id: int):
+        result = self._cursor.execute(
+            """
+            SELECT * 
+            FROM quest_group_info 
+            WHERE adventure_id = ? AND group_id = ?
+            """, (adventure_id, group_id))
+        if result.fetchone() is None:
+            raise Exception(f"No entry found for adventure: {adventure_id}, group: {group_id}")
+        self._cursor.execute(
+            """
+            UPDATE quest_group_info
+            SET message_id = ?
+            WHERE adventure_id = ? AND group_id = ?
+            """, (message_id, adventure_id, group_id))
+
+    # TODO: Find a way to merge this with add_remove_tag
+    def update_adventure_results(
+        self, 
+        adventure_id: int, 
+        group_id: str, 
+        quest_id: str, 
+        tag_type: TagType, 
+        tag: str, 
+        quantity: int
+    ) -> bool:
+        if quantity == 0:
+            return True
+        result = self._cursor.execute(
+            """
+            SELECT quantity
+            FROM adventure_results
+            WHERE 
+                adventure_id = ? AND 
+                group_id = ? AND 
+                quest_id = ? AND 
+                type = ? AND 
+                tag = ?
+            """,
+            (adventure_id, group_id, quest_id, tag_type.value, tag),
+        )
+
+        current_quantity = result.fetchone()
+        if current_quantity is None:
+            self._cursor.execute(
+                """INSERT INTO adventure_results VALUES(?, ?, ?, ?, ?, ?)""",
+                (adventure_id, group_id, quest_id, tag_type.value, tag, quantity),
+            )
+            return True
+        new_quantity = current_quantity[0] + quantity
+
+        if new_quantity == 0:
+            result = self._cursor.execute(
+                """
+                DELETE FROM adventure_results
+                WHERE 
+                    adventure_id = ? AND 
+                    group_id = ? AND 
+                    quest_id = ? AND 
+                    type = ? AND 
+                    tag = ?
+                """,
+                (adventure_id, group_id, quest_id, tag_type.value, tag),
+                )
+            return True
+
+        self._cursor.execute(
+            """
+            UPDATE adventure_results
+            SET quantity = ?
+            WHERE 
+                adventure_id = ? AND 
+                group_id = ? AND 
+                quest_id = ? AND 
+                type = ? AND 
+                tag = ?
+            """,
+            (new_quantity, adventure_id, group_id, quest_id, tag_type.value, tag),
+        )
+        return True
+
 
 class StorageModel:
     def __init__(self):
@@ -108,6 +211,24 @@ class StorageModel:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS player_tags(
                 user_id INT,
+                type STR,
+                tag STR,
+                quantity INT
+            )
+            """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS quest_group_info(
+                adventure_id INT,
+                group_id STR,
+                count INT,
+                message_id INT
+            )
+            """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS adventure_results(
+                adventure_id INT,
+                group_id STR,
+                quest_id STR,
                 type STR,
                 tag STR,
                 quantity INT
@@ -166,12 +287,57 @@ class StorageModel:
                 type
             FROM player_tags
             WHERE user_id = ?
-        """,
-            (user_id,),
-        )
+            """, (user_id,))
 
         tag_collection = TagCollection()
         for tag, quantity, type in result.fetchall():
             tag_type = TagType(type)
             tag_collection.add_tag(tag_type, tag, quantity)
         return tag_collection
+
+    def get_group_info(self, adventure_id: int, group_id: str) -> tuple[int, int | None]:
+        cursor = self._connection.cursor()
+        result = cursor.execute(
+            """
+            SELECT
+                count,
+                message_id
+            FROM quest_group_info
+            WHERE adventure_id = ? AND group_id = ?
+            """, (adventure_id, group_id))
+        row = result.fetchone()
+        if row is None:
+            return 0, None
+        count, message_id = row
+        return count, message_id
+
+    def get_adventure_results(self, adventure_id: int, group_id: str) -> AdventureGroup:
+        cursor = self._connection.cursor()
+        result = cursor.execute(
+            """
+            SELECT 
+                quest_id,
+                type,
+                tag,
+                quantity
+            FROM adventure_results
+            WHERE 
+                adventure_id = ? AND 
+                group_id = ? 
+            """,
+            (adventure_id, group_id))
+        quest_map: dict[str, TagCollection] = {}
+        for quest_id, tag_type, tag, quantity in result.fetchall():
+            quest_tags = quest_map.get(quest_id, TagCollection())
+            quest_tags.add_tag(TagType(tag_type), tag, quantity)
+            quest_map[quest_id] = quest_tags
+        adventure_steps: list[AdventureStep] = []
+        for quest_id in group_id.split(","):
+            changed_tags = quest_map.get(quest_id, TagCollection())
+            adventure_step = AdventureStep(
+                QUESTS[quest_id],
+                tags_gained=changed_tags,
+                tags_lost=TagCollection(),
+            )
+            adventure_steps.append(adventure_step)
+        return AdventureGroup(adventure_steps)

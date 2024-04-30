@@ -18,13 +18,14 @@ class Inventory:
         return self._tags.get(tag, 0)
 
     def add_tag(self, tag: str, quantity: int):
-        if quantity <= 0:
+        if quantity == 0:
             return
         if tag not in self._tags:
             self._tags[tag] = quantity
             return
         self._tags[tag] += quantity
 
+    #TODO: Remove this and use negative quantities
     def remove_tag(self, tag: str, quantity: int) -> bool:
         if quantity <= 0:
             return True

@@ -46,12 +46,21 @@ class Game:
                         quantity,
                     ) in adventure_step.tags_gained.get_all_tags():
                         t.add_remove_tag(user_id, tag_type, tag, quantity)
+                        t.update_adventure_results(
+                            adventure.adventure_id, adventure_group.group_id,
+                            adventure_step.quest.quest_id, tag_type, tag, quantity)
                     for (
                         tag_type,
                         tag,
                         quantity,
                     ) in adventure_step.tags_lost.get_all_tags():
                         t.add_remove_tag(user_id, tag_type, tag, -quantity)
+                        t.update_adventure_results(
+                            adventure.adventure_id, adventure_group.group_id,
+                            adventure_step.quest.quest_id, tag_type, tag, -quantity)
+                t.increment_or_insert_quest_group(
+                    adventure.adventure_id, adventure_group.group_id)
+
         return report
 
     def get_player_tags(self, user_id: int) -> TagCollection:

@@ -39,7 +39,7 @@ class AdventureStep:
                 item_name = item_name.title()
                 display_lines.append(f">     {sign}{quantity} {item_name}  ")
         for skill_id, xp in self.tags_gained.get_inventory(TagType.XP).get_all_tags():
-            display_lines.append(f">     Gained {xp} {skill_id} xp")
+            display_lines.append(f">     Gained {xp} {skill_id} xp  ")
         for zone_id in self.get_discovered_zones():
             zone = ZONES[zone_id]
             display_lines.append(f">     Discovered zone: {zone.name.title()}  ")
@@ -49,6 +49,15 @@ class AdventureStep:
 @dataclass
 class AdventureGroup:
     steps: list[AdventureStep]
+    message_id: int | None = None
+    @property
+    def merge(self) -> bool:
+        return any(step.quest.merge for step in self.steps)
+    @property
+    def group_id(self) -> str:
+        return ",".join(step.quest.quest_id for step in self.steps)
+    def display(self) -> str:
+        ...
 
 
 @dataclass
