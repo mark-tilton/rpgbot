@@ -50,14 +50,16 @@ class AdventureStep:
 class AdventureGroup:
     steps: list[AdventureStep]
     message_id: int | None = None
+
     @property
     def merge(self) -> bool:
         return any(step.quest.merge for step in self.steps)
+
     @property
     def group_id(self) -> str:
         return ",".join(step.quest.quest_id for step in self.steps)
-    def display(self) -> str:
-        ...
+
+    def display(self) -> str: ...
 
 
 @dataclass
@@ -141,27 +143,29 @@ def process_adventure(
             if random.random() < threshold:
                 new_quests.append(root_quest)
 
-        adventure_steps: list[AdventureStep] = []
-        while len(new_quests) > 0:
-            new_quest = new_quests.pop()
-            completed_quest = new_quest.complete_quest()
-            player_tags.add_tag_collection(completed_quest.tags_gained)
-            # We can assume this remove will succeed because we already checked requirements
-            player_tags.remove_tag_collection(completed_quest.tags_lost)
-            adventure_steps.append(
-                AdventureStep(
-                    quest=new_quest,
-                    tags_gained=completed_quest.tags_gained,
-                    tags_lost=completed_quest.tags_lost,
+        for new_root in new_quests:
+            quest_queue = [new_root]
+            adventure_steps: list[AdventureStep] = []
+            while len(quest_queue) > 0:
+                new_quest = quest_queue.pop()
+                completed_quest = new_quest.complete_quest()
+                player_tags.add_tag_collection(completed_quest.tags_gained)
+                # We can assume this remove will succeed because we already checked requirements
+                player_tags.remove_tag_collection(completed_quest.tags_lost)
+                adventure_steps.append(
+                    AdventureStep(
+                        quest=new_quest,
+                        tags_gained=completed_quest.tags_gained,
+                        tags_lost=completed_quest.tags_lost,
+                    )
                 )
-            )
-            next_step = new_quest.choose_next_step(player_tags, zone_id)
-            if next_step is None:
-                continue
-            new_quests.append(next_step)
+                next_step = new_quest.choose_next_step(player_tags, zone_id)
+                if next_step is None:
+                    continue
+                quest_queue.append(next_step)
 
-        if len(adventure_steps) > 0:
-            adventure_groups.append(AdventureGroup(adventure_steps))
+            if len(adventure_steps) > 0:
+                adventure_groups.append(AdventureGroup(adventure_steps))
 
     return AdventureReport(
         adventure.last_updated,
