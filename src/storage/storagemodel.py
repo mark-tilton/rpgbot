@@ -14,7 +14,9 @@ class StorageTransaction:
     def cancel(self):
         self._rollback = True
 
-    def start_adventure(self, user_id: int, zone_id: str, start_time: int, thread_id: int) -> Adventure:
+    def start_adventure(
+        self, user_id: int, zone_id: str, start_time: int, thread_id: int
+    ) -> Adventure:
         self._cursor.execute(
             "INSERT INTO player_adventure VALUES(?, ?, ?, ?, ?)",
             (None, user_id, zone_id, start_time, thread_id),
@@ -26,7 +28,7 @@ class StorageTransaction:
             user_id=user_id,
             zone_id=zone_id,
             last_updated=start_time,
-            thread_id=thread_id
+            thread_id=thread_id,
         )
 
     def update_adventure(self, adventure_id: int, last_updated: int):
@@ -98,20 +100,26 @@ class StorageTransaction:
             SELECT count 
             FROM quest_group_info 
             WHERE adventure_id = ? AND group_id = ?
-            """, (adventure_id, group_id))
+            """,
+            (adventure_id, group_id),
+        )
         if result.fetchone() is None:
             self._cursor.execute(
                 """
                 INSERT INTO quest_group_info
                 VALUES(?, ?, ?, ?)
-                """, (adventure_id, group_id, 1, None))
+                """,
+                (adventure_id, group_id, 1, None),
+            )
             return
         self._cursor.execute(
             """
             UPDATE quest_group_info
             SET count = count + 1
             WHERE adventure_id = ? AND group_id = ?
-            """, (adventure_id, group_id))
+            """,
+            (adventure_id, group_id),
+        )
 
     def add_group_message(self, adventure_id: int, group_id: str, message_id: int):
         result = self._cursor.execute(
@@ -119,25 +127,31 @@ class StorageTransaction:
             SELECT * 
             FROM quest_group_info 
             WHERE adventure_id = ? AND group_id = ?
-            """, (adventure_id, group_id))
+            """,
+            (adventure_id, group_id),
+        )
         if result.fetchone() is None:
-            raise Exception(f"No entry found for adventure: {adventure_id}, group: {group_id}")
+            raise Exception(
+                f"No entry found for adventure: {adventure_id}, group: {group_id}"
+            )
         self._cursor.execute(
             """
             UPDATE quest_group_info
             SET message_id = ?
             WHERE adventure_id = ? AND group_id = ?
-            """, (message_id, adventure_id, group_id))
+            """,
+            (message_id, adventure_id, group_id),
+        )
 
     # TODO: Find a way to merge this with add_remove_tag
     def update_adventure_results(
-        self, 
-        adventure_id: int, 
-        group_id: str, 
-        quest_id: str, 
-        tag_type: TagType, 
-        tag: str, 
-        quantity: int
+        self,
+        adventure_id: int,
+        group_id: str,
+        quest_id: str,
+        tag_type: TagType,
+        tag: str,
+        quantity: int,
     ) -> bool:
         if quantity == 0:
             return True
@@ -176,7 +190,7 @@ class StorageTransaction:
                     tag = ?
                 """,
                 (adventure_id, group_id, quest_id, tag_type.value, tag),
-                )
+            )
             return True
 
         self._cursor.execute(
@@ -287,7 +301,9 @@ class StorageModel:
                 type
             FROM player_tags
             WHERE user_id = ?
-            """, (user_id,))
+            """,
+            (user_id,),
+        )
 
         tag_collection = TagCollection()
         for tag, quantity, type in result.fetchall():
@@ -295,7 +311,9 @@ class StorageModel:
             tag_collection.add_tag(tag_type, tag, quantity)
         return tag_collection
 
-    def get_group_info(self, adventure_id: int, group_id: str) -> tuple[int, int | None]:
+    def get_group_info(
+        self, adventure_id: int, group_id: str
+    ) -> tuple[int, int | None]:
         cursor = self._connection.cursor()
         result = cursor.execute(
             """
@@ -304,7 +322,9 @@ class StorageModel:
                 message_id
             FROM quest_group_info
             WHERE adventure_id = ? AND group_id = ?
-            """, (adventure_id, group_id))
+            """,
+            (adventure_id, group_id),
+        )
         row = result.fetchone()
         if row is None:
             return 0, None
@@ -325,7 +345,8 @@ class StorageModel:
                 adventure_id = ? AND 
                 group_id = ? 
             """,
-            (adventure_id, group_id))
+            (adventure_id, group_id),
+        )
         quest_map: dict[str, TagCollection] = {}
         for quest_id, tag_type, tag, quantity in result.fetchall():
             quest_tags = quest_map.get(quest_id, TagCollection())
@@ -336,8 +357,7 @@ class StorageModel:
             changed_tags = quest_map.get(quest_id, TagCollection())
             adventure_step = AdventureStep(
                 QUESTS[quest_id],
-                tags_gained=changed_tags,
-                tags_lost=TagCollection(),
+                tags_changed=changed_tags,
             )
             adventure_steps.append(adventure_step)
         return AdventureGroup(adventure_steps)

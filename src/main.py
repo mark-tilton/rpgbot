@@ -1,4 +1,5 @@
 import json
+import time
 from collections.abc import Mapping
 
 import discord
@@ -8,8 +9,8 @@ from discord.ext import tasks
 from game.adventure import AdventureReport
 from game.game import Game
 from game.items import ITEMS
-from game.zones import ZONES, Zone
 from game.tags import TagType
+from game.zones import ZONES, Zone
 
 guild_id = 1229078590713364602
 
@@ -140,8 +141,17 @@ async def send_adventure_report(channel: discord.TextChannel, report: AdventureR
         message_edit_queue.append((full_message, message))
 
 
-@tasks.loop(seconds=1)
+last_report = 0
+
+
+@tasks.loop(seconds=0.1)
 async def update_adventures():
+    global last_report
+    current_time = time.time()
+    if current_time < last_report + 1:
+        return
+    last_report = current_time
+
     if len(message_edit_queue) > 0:
         print(f"Message queue length: {len(message_edit_queue)}")
     if len(message_edit_queue) == 0:
@@ -161,7 +171,7 @@ async def update_adventures():
                     continue
                 await handle_adventure_report(guild, channel, user, report)
 
-    for _ in range(min(len(message_edit_queue), 4)):
+    for _ in range(min(len(message_edit_queue), 5)):
         content, message = message_edit_queue.pop()
         await message.edit(content=content)
 

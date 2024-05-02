@@ -25,25 +25,13 @@ class Inventory:
             return
         self._tags[tag] += quantity
 
-    #TODO: Remove this and use negative quantities
-    def remove_tag(self, tag: str, quantity: int) -> bool:
-        if quantity <= 0:
-            return True
-        if tag not in self._tags:
-            return False
-        current_quantity = self._tags[tag]
-        if current_quantity < quantity:
-            return False
-        self._tags[tag] = current_quantity - quantity
-        return True
-
     def add_inventory(self, inventory: "Inventory"):
         for tag, quantity in inventory._tags.items():
             self.add_tag(tag, quantity)
 
     def remove_inventory(self, inventory: "Inventory") -> bool:
         for tag, quantity in inventory._tags.items():
-            if not self.remove_tag(tag, quantity):
+            if not self.add_tag(tag, -quantity):
                 return False
         return True
 
@@ -68,10 +56,6 @@ class TagCollection:
     def add_tag(self, tag_type: TagType, tag: str, quantity: int):
         inventory = self.get_inventory(tag_type)
         inventory.add_tag(tag, quantity)
-
-    def remove_tag(self, tag_type: TagType, tag: str, quantity: int) -> bool:
-        inventory = self.get_inventory(tag_type)
-        return inventory.remove_tag(tag, quantity)
 
     def add_inventory(self, tag_type: TagType, inventory: Inventory):
         current_inventory = self.get_inventory(tag_type)

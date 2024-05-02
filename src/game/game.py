@@ -11,7 +11,9 @@ class Game:
     def __init__(self):
         self.storage_model = StorageModel()
 
-    def start_adventure(self, user_id: int, zone_id: str, thread_id: int) -> AdventureReport | None:
+    def start_adventure(
+        self, user_id: int, zone_id: str, thread_id: int
+    ) -> AdventureReport | None:
         with self.storage_model as t:
             start_time = floor(time.time())
             current_adventure = self.storage_model.get_current_adventure(user_id)
@@ -44,22 +46,19 @@ class Game:
                         tag_type,
                         tag,
                         quantity,
-                    ) in adventure_step.tags_gained.get_all_tags():
+                    ) in adventure_step.tags_changed.get_all_tags():
                         t.add_remove_tag(user_id, tag_type, tag, quantity)
                         t.update_adventure_results(
-                            adventure.adventure_id, adventure_group.group_id,
-                            adventure_step.quest.quest_id, tag_type, tag, quantity)
-                    for (
-                        tag_type,
-                        tag,
-                        quantity,
-                    ) in adventure_step.tags_lost.get_all_tags():
-                        t.add_remove_tag(user_id, tag_type, tag, -quantity)
-                        t.update_adventure_results(
-                            adventure.adventure_id, adventure_group.group_id,
-                            adventure_step.quest.quest_id, tag_type, tag, -quantity)
+                            adventure.adventure_id,
+                            adventure_group.group_id,
+                            adventure_step.quest.quest_id,
+                            tag_type,
+                            tag,
+                            quantity,
+                        )
                 t.increment_or_insert_quest_group(
-                    adventure.adventure_id, adventure_group.group_id)
+                    adventure.adventure_id, adventure_group.group_id
+                )
 
         return report
 

@@ -31,8 +31,7 @@ class QuestReward:
 @dataclass(frozen=True)
 class CompletedQuest:
     quest_id: str
-    tags_gained: TagCollection
-    tags_lost: TagCollection
+    tags_changed: TagCollection
 
 
 @dataclass(frozen=True)
@@ -53,22 +52,17 @@ class Quest:
     next_steps: list[QuestNextStep]
 
     def complete_quest(self) -> CompletedQuest:
-        tags_gained = TagCollection()
+        tags_changed = TagCollection()
         for quest_reward in self.rewards:
             if random.random() * 100 >= quest_reward.chance:
                 continue
             quantity = random.randint(*quest_reward.quantity)
-            tags_gained.add_tag(quest_reward.tag_type, quest_reward.tag, quantity)
-        tags_lost = TagCollection()
+            tags_changed.add_tag(quest_reward.tag_type, quest_reward.tag, quantity)
         for req in self.requirements:
             if not req.consume:
                 continue
-            tags_lost.add_tag(req.tag_type, req.tag, req.quantity)
-        return CompletedQuest(
-            quest_id=self.quest_id,
-            tags_gained=tags_gained,
-            tags_lost=tags_lost,
-        )
+            tags_changed.add_tag(req.tag_type, req.tag, -req.quantity)
+        return CompletedQuest(quest_id=self.quest_id, tags_changed=tags_changed)
 
     def check_quest_requirements(
         self, player_tags: TagCollection, zone_id: str

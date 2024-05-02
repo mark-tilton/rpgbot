@@ -5,20 +5,19 @@ from dataclasses import dataclass, field
 
 from .items import ITEMS
 from .quests import ROOT_QUESTS, Quest
-from .tags import Inventory, TagCollection, TagType
+from .tags import TagCollection, TagType
 from .zones import ZONES
 
 
 @dataclass
 class AdventureStep:
     quest: Quest
-    tags_gained: TagCollection = field(default_factory=TagCollection)
-    tags_lost: TagCollection = field(default_factory=TagCollection)
+    tags_changed: TagCollection = field(default_factory=TagCollection)
 
     def get_discovered_zones(self) -> list[str]:
         return [
             zone_id
-            for zone_id, quantity in self.tags_gained.get_inventory(
+            for zone_id, quantity in self.tags_changed.get_inventory(
                 TagType.ZONE
             ).get_all_tags()
             if quantity >= 1
@@ -28,17 +27,15 @@ class AdventureStep:
         display_lines = []
         for prompt in self.quest.prompts:
             display_lines = [f"> - {prompt}  "]
-        inventories: list[tuple[str, Inventory]] = [
-            ("+", self.tags_gained.get_inventory(TagType.ITEM)),
-            ("-", self.tags_lost.get_inventory(TagType.ITEM)),
-        ]
-        for sign, inventory in inventories:
-            for item_id, quantity in inventory.get_all_tags():
-                item = ITEMS[item_id]
-                item_name = item.name if quantity == 1 else item.plural
-                item_name = item_name.title()
-                display_lines.append(f">     {sign}{quantity} {item_name}  ")
-        for skill_id, xp in self.tags_gained.get_inventory(TagType.XP).get_all_tags():
+        for item_id, quantity in self.tags_changed.get_inventory(
+            TagType.ITEM
+        ).get_all_tags():
+            item = ITEMS[item_id]
+            item_name = item.name if quantity == 1 else item.plural
+            item_name = item_name.title()
+            sign = "+" if quantity >= 0 else ""
+            display_lines.append(f">     {sign}{quantity} {item_name}  ")
+        for skill_id, xp in self.tags_changed.get_inventory(TagType.XP).get_all_tags():
             display_lines.append(f">     Gained {xp} {skill_id} xp  ")
         for zone_id in self.get_discovered_zones():
             zone = ZONES[zone_id]
@@ -97,8 +94,7 @@ class AdventureReport:
             first_step = steps[0]
             merged_step = AdventureStep(first_step.quest)
             for step in steps:
-                merged_step.tags_gained.add_tag_collection(step.tags_gained)
-                merged_step.tags_lost.add_tag_collection(step.tags_lost)
+                merged_step.tags_changed.add_tag_collection(step.tags_changed)
             display_lines.append(merged_step.display())
 
         return "\n".join(display_lines)
@@ -149,14 +145,11 @@ def process_adventure(
             while len(quest_queue) > 0:
                 new_quest = quest_queue.pop()
                 completed_quest = new_quest.complete_quest()
-                player_tags.add_tag_collection(completed_quest.tags_gained)
-                # We can assume this remove will succeed because we already checked requirements
-                player_tags.remove_tag_collection(completed_quest.tags_lost)
+                player_tags.add_tag_collection(completed_quest.tags_changed)
                 adventure_steps.append(
                     AdventureStep(
                         quest=new_quest,
-                        tags_gained=completed_quest.tags_gained,
-                        tags_lost=completed_quest.tags_lost,
+                        tags_changed=completed_quest.tags_changed,
                     )
                 )
                 next_step = new_quest.choose_next_step(player_tags, zone_id)
