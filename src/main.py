@@ -45,13 +45,14 @@ async def on_ready():
             found_zones.add(zone.zone_id)
 
     # Clear out all channels
-    # for zone_id in found_zones:
-    #     channel_id = zone_to_channel[zone_id]
-    #     channel = guild.get_channel(channel_id)
-    #     if channel is None or not isinstance(channel, discord.TextChannel):
-    #         continue
-    #     await channel.delete()
-    # found_zones.clear()
+    if game.is_fresh:
+        for zone_id in found_zones:
+            channel_id = zone_to_channel[zone_id]
+            channel = guild.get_channel(channel_id)
+            if channel is None or not isinstance(channel, discord.TextChannel):
+                continue
+            await channel.delete()
+        found_zones.clear()
 
     # Add new zones to the server
     self_overwrite = discord.PermissionOverwrite()
@@ -72,12 +73,14 @@ async def on_ready():
         channel_to_zone[channel.id] = zone
         zone_to_channel[zone.zone_id] = channel.id
 
+    # Start a new adventure for all current members
+    if game.is_fresh:
+        for user in client.get_all_members():
+            await start_adventure(user, zone_to_channel["forest"])
+
     print(f"We have logged in as {client.user}")
     await tree.sync(guild=discord.Object(id=guild_id))
     update_adventures.start()
-
-    for user in client.get_all_members():
-        await start_adventure(user, zone_to_channel["forest"])
 
 
 def get_interaction_info(
@@ -124,11 +127,14 @@ async def send_adventure_report(channel: discord.TextChannel, report: AdventureR
     if not thread:
         raise Exception(f"Thread not found: {thread_id}")
     adventure_id = report.adventure.adventure_id
-    group_ids = {group.group_id for group in report.adventure_groups}
-    for group_id in group_ids:
+    merge_group_ids = {
+        group.group_id for group in report.adventure_groups if group.merge
+    }
+    for group_id in merge_group_ids:
         group = game.storage_model.get_adventure_results(adventure_id, group_id)
-        _, message_id = game.storage_model.get_group_info(adventure_id, group_id)
+        count, message_id = game.storage_model.get_group_info(adventure_id, group_id)
         display_lines: list[str] = []
+        display_lines.append(f"x{count}:")
         for step in group.steps:
             display_lines.append(step.display())
         full_message = "\n".join(display_lines)
@@ -139,6 +145,13 @@ async def send_adventure_report(channel: discord.TextChannel, report: AdventureR
             continue
         message = thread.get_partial_message(message_id)
         message_edit_queue.append((full_message, message))
+
+    for normal_group in [group for group in report.adventure_groups if not group.merge]:
+        display_lines: list[str] = []
+        for step in normal_group.steps:
+            display_lines.append(step.display())
+        full_message = "\n".join(display_lines)
+        await thread.send(full_message)
 
 
 last_report = 0

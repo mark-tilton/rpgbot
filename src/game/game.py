@@ -1,3 +1,4 @@
+import os
 import time
 from math import floor
 
@@ -9,6 +10,8 @@ from .tags import TagCollection
 
 class Game:
     def __init__(self):
+        game_data_path = os.path.join(os.getcwd(), "game_data.db")
+        self.is_fresh = not os.path.exists(game_data_path)
         self.storage_model = StorageModel()
 
     def start_adventure(
@@ -48,6 +51,8 @@ class Game:
                         quantity,
                     ) in adventure_step.tags_changed.get_all_tags():
                         t.add_remove_tag(user_id, tag_type, tag, quantity)
+                        if not adventure_group.merge:
+                            continue
                         t.update_adventure_results(
                             adventure.adventure_id,
                             adventure_group.group_id,
@@ -56,6 +61,8 @@ class Game:
                             tag,
                             quantity,
                         )
+                if not adventure_group.merge:
+                    continue
                 t.increment_or_insert_quest_group(
                     adventure.adventure_id, adventure_group.group_id
                 )
