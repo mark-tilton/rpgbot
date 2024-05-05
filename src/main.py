@@ -147,6 +147,7 @@ async def send_adventure_report(channel: discord.TextChannel, report: AdventureR
         message_edit_queue.append((full_message, message))
 
     for normal_group in [group for group in report.adventure_groups if not group.merge]:
+        print(f"New quest for {thread.name}: {normal_group.group_id}")
         display_lines: list[str] = []
         for step in normal_group.steps:
             display_lines.append(step.display())
@@ -161,13 +162,14 @@ last_report = 0
 async def update_adventures():
     global last_report
     current_time = time.time()
-    if current_time < last_report + 1:
+    if current_time < last_report + 2:
         return
     last_report = current_time
 
     if len(message_edit_queue) > 0:
         print(f"Message queue length: {len(message_edit_queue)}")
     if len(message_edit_queue) == 0:
+        print("Updating adventures")
         for user in client.get_all_members():
             # Update the user's active adventure
             report = game.update_adventure(user.id)
@@ -183,8 +185,10 @@ async def update_adventures():
                     print(f"Channel {channel_id} was invalid")
                     continue
                 await handle_adventure_report(guild, channel, user, report)
+        # print("End new messages")
 
-    for _ in range(min(len(message_edit_queue), 5)):
+    for _ in range(min(len(message_edit_queue), 1)):
+        # print("Editing message")
         content, message = message_edit_queue.pop()
         await message.edit(content=content)
 
